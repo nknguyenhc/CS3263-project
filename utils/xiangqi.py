@@ -160,23 +160,8 @@ class Xiangqi():
             row = king_position[0] - 1
         else:
             row = king_position[0] + 1
-        if row >= 0 and row <= 9:
-            if self.is_enemy_piece_type((row, king_position[1]), Pawn):
-                constraints.append(PawnCheckConstraint(king_position, (row, king_position[1])))
-            if self.is_enemy_piece_type((row, king_position[1] + 1), Pawn):
-                constraints.append(PawnFrontDiscoverCheckConstraint(king_position, (row, king_position[1] + 1)))
-            if self.is_enemy_piece_type((row, king_position[1] - 1), Pawn):
-                constraints.append(PawnFrontDiscoverCheckConstraint(king_position, (row, king_position[1] - 1)))
-        
-        if self.turn:
-            row = king_position[0] + 1
-        else:
-            row = king_position[0] - 1
-        if row >= 0 and row <= 9:
-            if self.is_enemy_piece_type((row, king_position[1] + 1), Pawn):
-                constraints.append(PawnBackDiscoverCheckConstraint(king_position, (row, king_position[1] + 1)))
-            if self.is_enemy_piece_type((row, king_position[1] - 1), Pawn):
-                constraints.append(PawnBackDiscoverCheckConstraint(king_position, (row, king_position[1] - 1)))
+        if row >= 0 and row <= 9 and self.is_enemy_piece_type((row, king_position[1]), Pawn):
+            constraints.append(PawnCheckConstraint(king_position, (row, king_position[1])))
         
         return constraints
     
@@ -348,37 +333,6 @@ class HorseDiscoverCheckConstraint(CheckConstraint):
     
     def __str__(self):
         return f"<H-dconstraint, K: {self.king_position}, H: {self.horse_position}, p: {self.piece_position}>"
-
-
-class PawnFrontDiscoverCheckConstraint(CheckConstraint):
-    def __init__(self, king_position, pawn_position):
-        """Instantiates a constraint that the king cannot move into the pawn's path.
-        Applicable to pawns in front of the king.
-        """
-        super().__init__(king_position)
-        self.pawn_position = pawn_position
-    
-    def satisfies(self, move):
-        if move.from_coords != self.king_position:
-            return True
-        return move.to_coords[0] != self.pawn_position[0] and move.to_coords[1] != self.pawn_position[1]
-    
-    def __str__(self):
-        return f"<P-dconstraint, K: {self.king_position}, P: {self.pawn_position}>"
-
-
-class PawnBackDiscoverCheckConstraint(CheckConstraint):
-    def __init__(self, king_position, pawn_position):
-        """Instantiates a constraint that the king cannot move into the pawn's path.
-        Applicable to pawns behind the king.
-        """
-        super().__init__(king_position)
-        self.pawn_position = pawn_position
-    
-    def satisfies(self, move):
-        if move.from_coords != self.king_position:
-            return True
-        return move.to_coords[0] != self.pawn_position[0]
 
 
 class KingDiscoverCheckConstraint(CheckConstraint):
@@ -558,17 +512,106 @@ class King(Piece):
             return []
         
         actions = []
-        if position[0] + 1 <= (9 if self.turn else 2) and xiangqi.can_move_to((position[0] + 1, position[1])):
-            actions.append(Move(King, position, (position[0] + 1, position[1])))
-        if position[0] - 1 >= (7 if self.turn else 0) and xiangqi.can_move_to((position[0] - 1, position[1])):
-            actions.append(Move(King, position, (position[0] - 1, position[1])))
-        if position[1] + 1 <= 5 and xiangqi.can_move_to((position[0], position[1] + 1)) \
-                and not self.is_move_exposing_kings(position[1] + 1, xiangqi, position[0]):
-            actions.append(Move(King, position, (position[0], position[1] + 1)))
-        if position[1] - 1 >= 3 and xiangqi.can_move_to((position[0], position[1] - 1)) \
-                and not self.is_move_exposing_kings(position[1] - 1, xiangqi, position[0]):
-            actions.append(Move(King, position, (position[0], position[1] - 1)))
+        dest = (position[0] + 1, position[1])
+        if dest[0] <= (9 if self.turn else 2) and xiangqi.can_move_to(dest) \
+                and not self.is_move_exposing_check(xiangqi, dest, False):
+            actions.append(Move(King, position, dest))
+        dest = (position[0] - 1, position[1])
+        if dest[0] >= (7 if self.turn else 0) and xiangqi.can_move_to(dest) \
+                and not self.is_move_exposing_check(xiangqi, dest, False):
+            actions.append(Move(King, position, dest))
+        dest = (position[0], position[1] + 1)
+        if dest[1] <= 5 and xiangqi.can_move_to(dest) \
+                and not self.is_move_exposing_kings(position[1] + 1, xiangqi, position[0]) \
+                and not self.is_move_exposing_check(xiangqi, dest, True):
+            actions.append(Move(King, position, dest))
+        dest = (position[0], position[1] - 1)
+        if dest[1] >= 3 and xiangqi.can_move_to(dest) \
+                and not self.is_move_exposing_kings(position[1] - 1, xiangqi, position[0]) \
+                and not self.is_move_exposing_check(xiangqi, dest, True):
+            actions.append(Move(King, position, dest))
         return actions
+    
+    def is_move_exposing_check(self, xiangqi, dest, horizontal):
+        """Checks if the move to the destination exposes any check.
+        horizontal indicates the move is horizontal.
+        """
+        return self.is_move_exposing_horse_check(xiangqi, dest) or self.is_move_exposing_pawn_check(xiangqi, dest) \
+            or self.is_move_exposing_cannon_or_rook_check(xiangqi, dest, horizontal)
+    
+    def is_move_exposing_horse_check(self, xiangqi, dest):
+        # no need to check for dest[1], because this is king move
+        if dest[0] > 0 and xiangqi.board[dest[0] - 1][dest[1] - 1] is None:
+            if dest[0] > 1 and xiangqi.is_enemy_piece_type((dest[0] - 2, dest[1] - 1), Horse):
+                return True
+            if xiangqi.is_enemy_piece_type((dest[0] - 1, dest[1] - 2), Horse):
+                return True
+        if dest[0] > 0 and xiangqi.board[dest[0] - 1][dest[1] + 1] is None:
+            if dest[0] > 1 and xiangqi.is_enemy_piece_type((dest[0] - 2, dest[1] + 1), Horse):
+                return True
+            if xiangqi.is_enemy_piece_type((dest[0] - 1, dest[1] + 2), Horse):
+                return True
+        if dest[0] < 9 and xiangqi.board[dest[0] + 1][dest[1] - 1] is None:
+            if dest[0] < 8 and xiangqi.is_enemy_piece_type((dest[0] + 2, dest[1] - 1), Horse):
+                return True
+            if xiangqi.is_enemy_piece_type((dest[0] + 1, dest[1] - 2), Horse):
+                return True
+        if dest[0] < 9 and xiangqi.board[dest[0] + 1][dest[1] + 1] is None:
+            if dest[0] < 8 and xiangqi.is_enemy_piece_type((dest[0] + 2, dest[1] + 1), Horse):
+                return True
+            if xiangqi.is_enemy_piece_type((dest[0] + 1, dest[1] + 2), Horse):
+                return True
+        return False
+    
+    def is_move_exposing_pawn_check(self, xiangqi, dest):
+        if xiangqi.is_enemy_piece_type((dest[0], dest[1] - 1), Pawn):
+            return True
+        if xiangqi.is_enemy_piece_type((dest[0], dest[1] + 1), Pawn):
+            return True
+        if self.turn:
+            return xiangqi.is_enemy_piece_type((dest[0] - 1, dest[1]), Pawn)
+        else:
+            return xiangqi.is_enemy_piece_type((dest[0] + 1, dest[1]), Pawn)
+        
+    def is_move_exposing_cannon_or_rook_check(self, xiangqi, dest, horizontal):
+        def consider_cell(row, col, piece_count):
+            if xiangqi.board[row][col] is None:
+                return (piece_count, False)
+            target_position = (row, col)
+            match piece_count:
+                case 0:
+                    if xiangqi.is_enemy_piece_type(target_position, Rook):
+                        return (1, True)
+                    return (1, False)
+                case 1:
+                    if xiangqi.is_enemy_piece_type(target_position, Cannon):
+                        return (2, True)
+                    return (2, False)
+        
+        def consider_column(col, row_range):
+            piece_count, is_check_found = 0, False
+            for row in row_range:
+                piece_count, is_check_found = consider_cell(row, col, piece_count)
+                if is_check_found:
+                    return True
+                if piece_count == 2:
+                    return False
+            return False
+        
+        def consider_row(row, col_range):
+            piece_count, is_check_found = 0, False
+            for col in col_range:
+                piece_count, is_check_found = consider_cell(row, col, piece_count)
+                if is_check_found:
+                    return True
+                if piece_count == 2:
+                    return False
+            return False
+
+        if horizontal:
+            return consider_column(dest[1], range(dest[0] + 1, 10)) or consider_column(dest[1], range(dest[0] - 1, -1, -1))
+        else:
+            return consider_row(dest[0], range(dest[1] + 1, 9)) or consider_row(dest[0], range(dest[1] - 1, -1, -1))
     
     def is_move_exposing_kings(self, col_index, xiangqi, from_row):
         """Checks if the column with given index in the state has any piece blocking in between,

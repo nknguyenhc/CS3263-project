@@ -858,6 +858,22 @@ def test_pawn_discover_check_constraint():
     ], turn=False)
     assert set(board.actions()) == set()
 
+    board = Xiangqi([
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Pawn(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, Pawn(False), None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (8, 4), (9, 4)),
+    }
+
 def test_king_discover_check_constraint():
     board = Xiangqi([
         [None, None, None, None, King(False), None, None, None, None],
@@ -1060,7 +1076,6 @@ def test_cannon_check_constraint():
     assert set(board.actions()) == {
         Move(Rook, (4, 1), (4, 4)),
         Move(Advisor, (9, 3), (8, 4)),
-        Move(King, (9, 4), (9, 5)), # wrong move, to be removed
     }
 
     board = Xiangqi(board=[
@@ -1172,6 +1187,111 @@ def test_pawn_check_constraint():
         [None, None, None, None, None, None, None, None, None],
         [None, None, None, None, Pawn(False), Pawn(False), None, None, None],
         [None, None, None, None, King(True), None, None, None, None],
+    ])
+    assert set(board.actions()) == set()
+
+def test_rook_constraining_king():
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Rook(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, King(True), None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (9, 5), (8, 5)),
+    }
+
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+        [None, None, None, Advisor(True), None, Advisor(True), Rook(False), None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (8, 4), (9, 4)),
+        Move(King, (8, 4), (7, 4)),
+        Move(King, (8, 4), (8, 5)),
+    }
+
+def test_cannon_constrain_king():
+    board = Xiangqi(board=[
+        [None, None, None, None, King(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Advisor(True), None, None, None, None],
+        [None, None, None, King(True), None, Advisor(True), None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (9, 3), (8, 3)),
+        Move(Advisor, (8, 4), (7, 3)),
+        Move(Advisor, (8, 4), (7, 5)),
+    }
+
+    board = Xiangqi(board=[
+        [None, None, None, None, King(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(False), None, None, None, None],
+        [None, None, None, None, Pawn(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Advisor(True), None, None, None, None],
+        [None, None, None, King(True), None, Advisor(True), None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (9, 3), (9, 4)),
+        Move(King, (9, 3), (8, 3)),
+        Move(Advisor, (8, 4), (7, 3)),
+        Move(Advisor, (8, 4), (7, 5)),
+    }
+
+def test_horse_constrain_king():
+    board = Xiangqi(board=[
+        [None, None, None, None, King(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Horse(False), None, None, None, None],
+        [None, None, None, None, Elephant(True), Horse(False), None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (8, 4), (8, 5)),
+        Move(King, (8, 4), (8, 3)),
+    }
+
+    board = Xiangqi(board=[
+        [None, None, None, None, King(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, Horse(False), None, None, None, None, None, None],
+        [None, None, None, King(True), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
     ])
     assert set(board.actions()) == set()
 
