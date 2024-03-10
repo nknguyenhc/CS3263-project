@@ -210,6 +210,465 @@ class Xiangqi():
             else:
                 next_state.king_positions[1] = action.to_coords
         return next_state
+    
+    def parse_move(self, move_string):
+        """Parses a move string into a legitimate.
+        Throws InvalidMoveException if the move is invalid.
+        """
+        if len(move_string) != 4:
+            raise InvalidMoveException(move_string)
+        
+        match move_string[0]:
+            case 'K':
+                move = self.parse_king_move(move_string)
+            case 'A':
+                move = self.parse_advisor_move(move_string)
+            case 'E':
+                move = self.parse_elephant_move(move_string)
+            case 'H':
+                move = self.parse_horse_move(move_string)
+            case 'R':
+                move = self.parse_rook_move(move_string)
+            case 'C':
+                move = self.parse_cannon_move(move_string)
+            case 'P':
+                move = self.parse_pawn_move(move_string)
+            case '+' | '-':
+                move = self.parse_piece_with_order_move(move_string)
+            case '1' | '2' | '3' | '4' | '5':
+                move = self.parse_pawn_with_order_move(move_string)
+            case _:
+                raise InvalidMoveException(move_string)
+        
+        possible_moves = self.actions()
+        if move not in possible_moves:
+            raise InvalidMoveException(move_string)
+        return move
+    
+    def is_friendly_piece_type(self, position, piecetype):
+        """Checks if the piece at the given position is a friendly piece of the given type.
+        """
+        return isinstance(self.board[position[0]][position[1]], piecetype) and self.board[position[0]][position[1]].turn == self.turn
+    
+    def from_col(self, move_string):
+        """Returns the starting col index from the move string.
+        """
+        try:
+            return 9 - int(move_string[1]) if self.turn else int(move_string[1]) - 1
+        except ValueError:
+            raise InvalidMoveException(move_string)
+    
+    def dest_col(self, move_string):
+        """Returns the destination col from the move string.
+        """
+        try:
+            return 9 - int(move_string[3]) if self.turn else int(move_string[3]) - 1
+        except ValueError:
+            raise InvalidMoveException(move_string)
+    
+    def dest_row(self, curr_row, row_increment):
+        """Returns the row index from the move string.
+        """
+        return curr_row - row_increment if self.turn else curr_row + row_increment
+    
+    def get_row_difference(self, move_string):
+        try:
+            return int(move_string[3])
+        except ValueError:
+            raise InvalidMoveException(move_string)
+    
+    def search_col(self, col, piecetype, index=0, max_count=1):
+        """Search the column for the piece type.
+        col: the column index to search for
+        piecetype: the piece type to search for
+        index: the index of the piecetype in the column, 0-indexed
+        max_count: the maximum count of the piecetype in the column
+        Returns the row index of the target piece, or None if not found.
+        """
+        count = 0
+        curr_row = -1
+        for row in (range(0, 10) if self.turn else range(9, -1, -1)):
+            if not self.is_friendly_piece_type((row, col), piecetype):
+                continue
+            if count == max_count:
+                return None
+            if count == index:
+                curr_row = row
+            count += 1
+        
+        if max_count > 1:
+            if count < 2:
+                return None
+        return curr_row if curr_row >= 0 else None
+    
+    def parse_king_move(self, move_string):
+        col = self.from_col(move_string)
+        for row in ([7, 8, 9] if self.turn else [0, 1, 2]):
+            if not self.is_friendly_piece_type((row, col), King):
+                continue
+            
+            match move_string[2]:
+                case '+':
+                    if row == 7 or row == 2:
+                        raise InvalidMoveException(move_string)
+                    if move_string[3] != '1':
+                        raise InvalidMoveException(move_string)
+                    dest_row = self.dest_row(row, 1)
+                    return Move(King, (row, col), (dest_row, col))
+                case '-':
+                    if row == 9 or row == 0:
+                        raise InvalidMoveException(move_string)
+                    if move_string[3] != '1':
+                        raise InvalidMoveException(move_string)
+                    dest_row = self.dest_row(row, -1)
+                    return Move(King, (row, col), (dest_row, col))
+                case '.':
+                    dest_col = self.dest_col(move_string)
+                    if abs(dest_col - col) != 1 or dest_col < 3 or dest_col > 5:
+                        raise InvalidMoveException(move_string)
+                    return Move(King, (row, col), (row, dest_col))
+                case _:
+                    raise InvalidMoveException(move_string)
+        
+        raise InvalidMoveException(move_string)
+    
+    def parse_advisor_move(self, move_string):
+        col = self.from_col(move_string)
+        match col:
+            case 3 | 5:
+                match move_string[2]:
+                    case '+':
+                        row = 7 if self.turn else 2
+                        if self.is_friendly_piece_type((row, col), Advisor):
+                            raise InvalidMoveException(move_string)
+                        row = 9 if self.turn else 0
+                        if not self.is_friendly_piece_type((row, col), Advisor):
+                            raise InvalidMoveException(move_string)
+                        target_row = self.dest_row(row, 1)
+                    case '-':
+                        row = 9 if self.turn else 0
+                        if self.is_friendly_piece_type((row, col), Advisor):
+                            raise InvalidMoveException(move_string)
+                        row = 7 if self.turn else 2
+                        if not self.is_friendly_piece_type((row, col), Advisor):
+                            raise InvalidMoveException(move_string)
+                        target_row = self.dest_row(row, -1)
+                    case _:
+                        raise InvalidMoveException(move_string)
+                if move_string[3] != '5':
+                    raise InvalidMoveException(move_string)
+                return Move(Advisor, (row, col), (target_row, 4))
+            case 4:
+                row = 8 if self.turn else 1
+                if not self.is_friendly_piece_type((row, col), Advisor):
+                    raise InvalidMoveException(move_string)
+                target_col = self.dest_col(move_string)
+                if target_col != 3 and target_col != 5:
+                    raise InvalidMoveException(move_string)
+                match move_string[2]:
+                    case '+':
+                        target_row = self.dest_row(row, 1)
+                    case '-':
+                        target_row = self.dest_row(row, -1)
+                    case _:
+                        raise InvalidMoveException(move_string)
+                return Move(Advisor, (row, col), (target_row, target_col))
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_elephant_move(self, move_string):
+        col = self.from_col(move_string)
+        target_col = self.dest_col(move_string)
+        match col:
+            case 0 | 4 | 8:
+                row = 7 if self.turn else 2
+                if not self.is_friendly_piece_type((row, col), Elephant):
+                    raise InvalidMoveException(move_string)
+                if abs(target_col - col) != 2:
+                    raise InvalidMoveException(move_string)
+                match move_string[2]:
+                    case '+':
+                        target_row = self.dest_row(row, 2)
+                    case '-':
+                        target_row = self.dest_row(row, -2)
+                    case _:
+                        raise InvalidMoveException(move_string)
+                if self.board[(target_row + row) // 2][(target_col + col) // 2] is not None:
+                    raise InvalidMoveException(move_string)
+                return Move(Elephant, (row, col), (target_row, target_col))
+            case 2 | 6:
+                target_row = 7 if self.turn else 2
+                match move_string[2]:
+                    case '+':
+                        row = 5 if self.turn else 4
+                        if self.is_friendly_piece_type((row, col), Elephant):
+                            raise InvalidMoveException(move_string)
+                        row = 9 if self.turn else 0
+                        if not self.is_friendly_piece_type((row, col), Elephant):
+                            raise InvalidMoveException(move_string)
+                    case '-':
+                        row = 9 if self.turn else 0
+                        if self.is_friendly_piece_type((row, col), Elephant):
+                            raise InvalidMoveException(move_string)
+                        row = 5 if self.turn else 4
+                        if not self.is_friendly_piece_type((row, col), Elephant):
+                            raise InvalidMoveException(move_string)
+                    case _:
+                        raise InvalidMoveException(move_string)
+                return Move(Elephant, (row, col), (target_row, target_col))
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_horse_move(self, move_string, col=None, row=None):
+        col = col if col != None else self.from_col(move_string)
+        row = row if row != None else self.search_col(col, Horse)
+        if row is None:
+            raise InvalidMoveException(move_string)
+        
+        target_col = self.dest_col(move_string)
+        match abs(target_col - col):
+            case 1:
+                match move_string[2]:
+                    case '+':
+                        target_row = self.dest_row(row, 2)
+                    case '-':
+                        target_row = self.dest_row(row, -2)
+                    case _:
+                        raise InvalidMoveException(move_string)
+            case 2:
+                match move_string[2]:
+                    case '+':
+                        target_row = self.dest_row(row, 1)
+                    case '-':
+                        target_row = self.dest_row(row, -1)
+                    case _:
+                        raise InvalidMoveException(move_string)
+            case _:
+                raise InvalidMoveException(move_string)
+        if target_row < 0 or target_row >= 10:
+            raise InvalidMoveException(move_string)
+        return Move(Horse, (row, col), (target_row, target_col))
+    
+    def parse_rook_move(self, move_string, col=None, row=None):
+        col = col if col != None else self.from_col(move_string)
+        row = row if row != None else self.search_col(col, Rook)
+        if row is None:
+            raise InvalidMoveException(move_string)
+        
+        match move_string[2]:
+            case '+':
+                row_increment = self.get_row_difference(move_string)
+                target_row = self.dest_row(row, row_increment)
+                if target_row > 9 and target_row < 0:
+                    raise InvalidMoveException(move_string)
+                for test_row in (range(row - 1, target_row, -1) if self.turn else range(row + 1, target_row)):
+                    if self.board[test_row][col] is not None:
+                        raise InvalidMoveException(move_string)
+                return Move(Rook, (row, col), (target_row, col))
+            case '-':
+                row_decrement = self.get_row_difference(move_string)
+                target_row = self.dest_row(row, -row_decrement)
+                if target_row > 9 or target_row < 0:
+                    raise InvalidMoveException(move_string)
+                for test_row in (range(row + 1, target_row) if self.turn else range(row - 1, target_row, -1)):
+                    if self.board[test_row][col] is not None:
+                        raise InvalidMoveException(move_string)
+                return Move(Rook, (row, col), (target_row, col))
+            case '.':
+                target_col = self.dest_col(move_string)
+                if col < 0 or col > 8 or target_col == col:
+                    raise InvalidMoveException(move_string)
+                for test_col in (range(col + 1, target_col) if target_col > col else range(col - 1, target_col, -1)):
+                    if self.board[row][test_col] is not None:
+                        raise InvalidMoveException(move_string)
+                return Move(Rook, (row, col), (row, target_col))
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_cannon_move(self, move_string, col=None, row=None):
+        col = col if col != None else self.from_col(move_string)
+        row = row if row != None else self.search_col(col, Cannon)
+        if row is None:
+            raise InvalidMoveException(move_string)
+        
+        def test_col(row, col, row_range, target_row):
+            if target_row > 9 or target_row < 0 or target_row == row:
+                raise InvalidMoveException(move_string)
+            piece_count = 0
+            for row in row_range:
+                if self.board[row][col] is None:
+                    continue
+                piece_count += 1
+                if piece_count >= 2:
+                    raise InvalidMoveException(move_string)
+            if piece_count == 0:
+                if self.board[target_row][col] is not None:
+                    raise InvalidMoveException(move_string)
+            elif piece_count == 1:
+                if self.board[target_row][col] is None:
+                    raise InvalidMoveException(move_string)
+        
+        def test_row(row, col, col_range, target_col):
+            if target_col > 8 or target_col < 0 or target_col == col:
+                raise InvalidMoveException(move_string)
+            piece_count = 0
+            for col in col_range:
+                if self.board[row][col] is None:
+                    continue
+                piece_count += 1
+                if piece_count >= 2:
+                    raise InvalidMoveException(move_string)
+            if piece_count == 0:
+                if self.board[row][target_col] is not None:
+                    raise InvalidMoveException(move_string)
+            elif piece_count == 1:
+                if self.board[row][target_col] is None:
+                    raise InvalidMoveException(move_string)
+        
+        match move_string[2]:
+            case '+':
+                row_increment = self.get_row_difference(move_string)
+                target_row = self.dest_row(row, row_increment)
+                test_col(row, col, range(row - 1, target_row, -1) if self.turn else range(row + 1, target_row), target_row)
+                return Move(Cannon, (row, col), (target_row, col))
+            case '-':
+                row_decrement = self.get_row_difference(move_string)
+                target_row = self.dest_row(row, -row_decrement)
+                test_col(row, col, range(row + 1, target_row) if self.turn else range(row - 1, target_row, -1), target_row)
+                return Move(Cannon, (row, col), (target_row, col))
+            case '.':
+                target_col = self.dest_col(move_string)
+                test_row(row, col, range(col + 1, target_col) if target_col > col else range(col - 1, target_col, -1), target_col)
+                return Move(Cannon, (row, col), (row, target_col))
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_pawn_move(self, move_string, col=None, row=None):
+        col = col if col != None else self.from_col(move_string)
+        row = row if row != None else self.search_col(col, Pawn)
+        if row is None:
+            raise InvalidMoveException(move_string)
+        
+        match move_string[2]:
+            case '+':
+                if row == 0 or row == 9:
+                    raise InvalidMoveException(move_string)
+                if move_string[3] != '1':
+                    raise InvalidMoveException(move_string)
+                target_row = self.dest_row(row, 1)
+                return Move(Pawn, (row, col), (target_row, col))
+            case '.':
+                if self.turn:
+                    if row > 4:
+                        raise InvalidMoveException(move_string)
+                else:
+                    if row < 5:
+                        raise InvalidMoveException(move_string)
+                target_col = self.dest_col(move_string)
+                if abs(target_col - col) != 1:
+                    raise InvalidMoveException(move_string)
+                return Move(Pawn, (row, col), (row, target_col))
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_piece_with_order_move(self, move_string):
+        match move_string[0]:
+            case '+':
+                index = 0
+            case '-':
+                index = 1
+            
+        def find_piece(piece_type):
+            for col in range(9):
+                row = self.search_col(col, piece_type, index=index, max_count=2)
+                if row is not None:
+                    return row, col
+            raise InvalidMoveException(move_string)
+        
+        match move_string[1]:
+            case 'A':
+                return self.parse_advisor_front_back_move(move_string)
+            case 'E':
+                return self.parse_elephant_front_back_move(move_string)
+            case 'H':
+                row, col = find_piece(Horse)
+                return self.parse_horse_move(move_string, col=col, row=row)
+            case 'R':
+                row, col = find_piece(Rook)
+                return self.parse_rook_move(move_string, col=col, row=row)
+            case 'C':
+                row, col = find_piece(Cannon)
+                return self.parse_cannon_move(move_string, col=col, row=row)
+            case 'P':
+                row, col = find_piece(Pawn)
+                return self.parse_pawn_move(move_string, col=col, row=row)
+            case _:
+                raise InvalidMoveException(move_string)
+    
+    def parse_advisor_front_back_move(self, move_string):
+        target_row = 8 if self.turn else 1
+        match move_string[0]:
+            case '+':
+                if move_string[2:4] != '-5':
+                    raise InvalidMoveException(move_string)
+                row, other_row = (7, 9) if self.turn else (2, 0)
+            case '-':
+                if move_string[2:4] != '+5':
+                    raise InvalidMoveException(move_string)
+                row, other_row = (9, 7) if self.turn else (0, 2)
+        
+        for col in [3, 5]:
+            if not self.is_friendly_piece_type((other_row, col), Advisor):
+                continue
+            if not self.is_friendly_piece_type((row, col), Advisor):
+                continue
+            return Move(Advisor, (row, col), (target_row, 4))
+        raise InvalidMoveException(move_string)
+    
+    def parse_elephant_front_back_move(self, move_string):
+        target_row = 7 if self.turn else 2
+        match move_string[0]:
+            case '+':
+                row, other_row = (5, 9) if self.turn else (4, 0)
+            case '-':
+                row, other_row = (9, 5) if self.turn else (0, 4)
+        target_col = self.dest_col(move_string)
+        
+        for col in [2, 6]:
+            if not self.is_friendly_piece_type((other_row, col), Elephant):
+                continue
+            if not self.is_friendly_piece_type((row, col), Elephant):
+                continue
+            return Move(Elephant, (row, col), (target_row, target_col))
+        raise InvalidMoveException(move_string)
+    
+    def parse_pawn_with_order_move(self, move_string):
+        index = int(move_string[0]) - 1
+        col = self.from_col(move_string)
+        row = self.search_col(col, Pawn, index=index, max_count=5)
+        if row is None:
+            raise InvalidMoveException(move_string)
+        
+        return self.parse_pawn_move(move_string, col=col, row=row)
+    
+    def __str__(self):
+        def condense_row(row):
+            return ' '.join([str(piece) if piece else '  ' for piece in row])
+        
+        return '\n'.join([condense_row(row) for row in self.board]) + f'\nturn: {0 if self.turn else 1}'
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def __eq__(self, other):
+        if not isinstance(other, Xiangqi):
+            return False
+        return self.board == other.board and self.turn == other.turn
+
+
+class InvalidMoveException(Exception):
+    def __init__(self, move_string):
+        super().__init__(f"Invalid move string: \"{move_string}\" is not a valid move")
 
 
 class CheckConstraint:
