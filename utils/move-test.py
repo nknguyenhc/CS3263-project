@@ -275,6 +275,23 @@ def test_board_str():
                       + '\nR0 H0 E0 A0 K0 A0 E0 H0 R0' \
                       + '\nturn: 0'
 
+def test_load_board():
+    with open('board-test.in') as f:
+        board_string = f.read()
+        board = Xiangqi.from_string(board_string)
+    assert board == Xiangqi(board=[
+        [Rook(False), None, Elephant(False), Advisor(False), King(False), Advisor(False), Elephant(False), Rook(False), None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, Cannon(False), Horse(False), None, None, None, Horse(False), Cannon(False), None],
+        [Pawn(False), None, Pawn(False), None, Pawn(False), None, None, Rook(True), Pawn(False)],
+        [None, None, None, None, None, None, Pawn(False), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Pawn(True), None, Pawn(True), None, Pawn(True), None, Pawn(True), None, Pawn(True)],
+        [None, Cannon(True), None, None, Cannon(True), None, Horse(True), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Rook(True), Horse(True), Elephant(True), Advisor(True), King(True), Advisor(True), Elephant(True), None, None],
+    ])
+
 def main():
     test_king_move()
     test_advisor_move()
@@ -286,6 +303,7 @@ def main():
     test_front_back_move()
     test_pawn_order_move()
     test_board_str()
+    test_load_board()
 
 if __name__ == '__main__':
     main()

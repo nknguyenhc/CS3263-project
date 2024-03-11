@@ -47,6 +47,51 @@ class Xiangqi():
                     king_positions[1] = (i, j)
         return king_positions
     
+    def from_string(board_string):
+        """Given a string representation of the board,
+        returns the corresponding board.
+        """
+        def read_piece(piece_string):
+            if piece_string == '--':
+                return None
+            
+            match piece_string[1]:
+                case '0':
+                    turn = True
+                case '1':
+                    turn = False
+                case _:
+                    raise InvalidBoardException()
+            
+            match piece_string[0]:
+                case 'K':
+                    return King(turn)
+                case 'A':
+                    return Advisor(turn)
+                case 'E':
+                    return Elephant(turn)
+                case 'H':
+                    return Horse(turn)
+                case 'R':
+                    return Rook(turn)
+                case 'C':
+                    return Cannon(turn)
+                case 'P':
+                    return Pawn(turn)
+                case _:
+                    raise InvalidBoardException()
+
+        def read_row(row_string):
+            pieces = [read_piece(piece) for piece in row_string.split(' ')]
+            if len(pieces) != 9:
+                raise InvalidBoardException()
+            return pieces
+
+        board = [read_row(row.strip()) for row in board_string.split('\n')]
+        if len(board) != 10:
+            raise InvalidBoardException()
+        return Xiangqi(board=board)
+    
     def actions(self):
         """Returns a list of actions available at this state.
         """
@@ -666,6 +711,11 @@ class Xiangqi():
         return self.board == other.board and self.turn == other.turn
 
 
+class InvalidBoardException(Exception):
+    def __init__(self):
+        super().__init__("The content of the given file does not represent a true board.")
+
+
 class InvalidMoveException(Exception):
     def __init__(self, move_string):
         super().__init__(f"Invalid move string: \"{move_string}\" is not a valid move")
@@ -960,6 +1010,11 @@ class Piece:
     
     def __repr__(self):
         return self.__str__()
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self.turn == other.turn
 
 
 class King(Piece):

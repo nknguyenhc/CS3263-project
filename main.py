@@ -1,5 +1,6 @@
 from utils.xiangqi import Xiangqi, InvalidMoveException
 from randomalgo import RandomAlgo
+import sys
 
 # Replace this line with your algo
 algo = RandomAlgo()
@@ -7,6 +8,12 @@ algo = RandomAlgo()
 def main():
     print('Welcome! In this programme, you can test out your algorithm by manually playing against it.')
     print('Note that the board will always be displayed with red side at the bottom and black side on top.')
+
+    if len(sys.argv) > 1:
+        board = read_board(sys.argv[1])
+    else:
+        board = Xiangqi()
+
     turn_string = input('Please decide if you want to play as red (go first) or black (go second): (R/B) ')
     while turn_string != 'R' and turn_string != 'B':
         turn_string = input('Invalid, please key in again: (R/B) ')
@@ -16,7 +23,6 @@ def main():
     else:
         human_turn, algo_turn = False, True
 
-    board = Xiangqi()
     actions = board.actions()
     while len(actions) != 0:
         print('Current board:')
@@ -46,6 +52,12 @@ def main():
         print("You won!")
     else:
         print("Algo won!")
+
+def read_board(filename):
+    print("Reading from board")
+    with open(filename) as f:
+        board_string = f.read()
+        return Xiangqi.from_string(board_string)
 
 if __name__ == '__main__':
     main()
