@@ -38,9 +38,6 @@ def main():
             except InvalidMoveException as e:
                 print(e)
                 continue
-            except Exception as e:
-                print(f"Unhandled exception: {e}")
-                continue
         board = board.move(move)
         print()
         actions = board.actions()
