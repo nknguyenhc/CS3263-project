@@ -1,7 +1,13 @@
 from copy import deepcopy
 from itertools import chain
 
+def manhanttan_distance(pos1, pos2):
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
 class Xiangqi():
+    red_king_positions = set([(i, j) for i in range(7, 10) for j in range(3, 6)])
+    black_king_positions = set([(i, j) for i in range(0, 3) for j in range(3, 6)])
+
     def __init__(self, board=None, turn=True, king_positions=None):
         """Instantiates a new board.
         Board is either not given, which means a default board,
@@ -1015,6 +1021,28 @@ class Piece:
         if not isinstance(other, self.__class__):
             return False
         return self.turn == other.turn
+    
+    def value(self, position):
+        """Returns the material value of this piece.
+        """
+        raise NotImplementedError
+    
+    def activity(self, xiangqi, position):
+        """Returns how much of the board that this piece can control, as a float between 0 and 1.
+        0 means it cannot move at all, while 1 means it is not obstructed by any piece.
+        xiangqi is the state of the game, and position indicates its position on the board.
+        """
+        raise NotImplementedError
+    
+    def bonus(self, xiangqi, position, values):
+        """Returns the bonus for this piece in this position.
+        These bonuses are due to their threat on the opponent king.
+        values is a tuple of 2 elements, which are the total values (with activity)
+        of the same side and opponent side, respectively.
+        A piece can only create threat to the king if it is supported by other pieces.
+        Using total side value is not very accurate, because supporting pieces must be in good position as well, for piece to create threat.
+        """
+        raise NotImplementedError
 
 
 class King(Piece):
@@ -1143,6 +1171,15 @@ class King(Piece):
     
     def to_string():
         return 'K'
+    
+    def value(self, position):
+        return 0
+    
+    def activity(self, xiangqi, position):
+        return 0
+    
+    def bonus(self, xiangqi, position, values):
+        return 0
 
 
 class Advisor(Piece):
@@ -1182,6 +1219,15 @@ class Advisor(Piece):
     
     def to_string():
         return 'A'
+    
+    def value(self, position):
+        return 150 if self.turn else -150
+    
+    def activity(self, xiangqi, position):
+        return 1
+    
+    def bonus(self, xiangqi, position, values):
+        return 0
 
 
 class Elephant(Piece):
@@ -1216,6 +1262,34 @@ class Elephant(Piece):
     
     def to_string():
         return 'E'
+    
+    def value(self, position):
+        return 150 if self.turn else -150
+    
+    def activity(self, xiangqi, position):
+        possible_direction_count = 0
+        possible_move_count = 0
+        row, col = position
+        if row > 0 and col > 0:
+            possible_direction_count += 1
+            if xiangqi.board[row - 1][col - 1] is None:
+                possible_move_count += 1
+        if row > 0 and col < 8:
+            possible_direction_count += 1
+            if xiangqi.board[row - 1][col + 1] is None:
+                possible_move_count += 1
+        if row < 9 and col > 0:
+            possible_direction_count += 1
+            if xiangqi.board[row + 1][col - 1] is None:
+                possible_move_count += 1
+        if row < 9 and col < 8:
+            possible_direction_count += 1
+            if xiangqi.board[row + 1][col + 1] is None:
+                possible_move_count += 1
+        return possible_move_count / possible_direction_count
+    
+    def bonus(self, xiangqi, position, values):
+        return 0
 
 
 class Horse(Piece):
@@ -1251,6 +1325,107 @@ class Horse(Piece):
     
     def to_string():
         return 'H'
+    
+    def value(self, position):
+        return 330 if self.turn else -330
+    
+    def activity(self, xiangqi, position):
+        """Horse strength is dependent on whether it is pinned at its 4 sides.
+        Return value between 0.5 - 1.
+        """
+        possible_direction_count = 0
+        possible_move_count = 0
+        row, col = position
+        if row > 0:
+            possible_direction_count += 2
+            if xiangqi.board[row - 1][col] is None:
+                possible_move_count += 2
+        if row < 9:
+            possible_direction_count += 2
+            if xiangqi.board[row + 1][col] is None:
+                possible_move_count += 2
+        if col > 0:
+            possible_direction_count += 2
+            if xiangqi.board[row][col - 1] is None:
+                possible_move_count += 2
+        if col < 8:
+            possible_direction_count += 2
+            if xiangqi.board[row][col + 1] is None:
+                possible_move_count += 2
+        return possible_move_count / possible_direction_count * 0.5 + 0.5
+    
+    def bonus(self, xiangqi, position, values):
+        """The bonus of the horse is if it threatens the king.
+        For bonus is count, the necessary condition is that the horse threatens a position in the palace.
+        If it is pinned, bonus is only counted if it targets the king directly (through the pinned direction)
+        If it is not pinned, bonus is counted only if:
+        * King is in safe position,
+        and Manhattan distance between threatened position and king is at most 1.
+        * King is not in safe position, 
+        and Manhattan distance between threatened position and king is at most 2.
+        """
+        if self.turn:
+            king_positions = Xiangqi.black_king_positions
+            king_position = xiangqi.king_positions[1]
+            is_king_safe = king_position == (0, 4)
+            side_value = values[0]
+        else:
+            king_positions = Xiangqi.red_king_positions
+            king_position = xiangqi.king_positions[0]
+            is_king_safe = king_position == (9, 4)
+            side_value = values[1]
+        base_value = 100 if is_king_safe else 500
+        
+        def calculate_not_pinned_value(threatened_position):
+            if threatened_position not in king_positions:
+                return 0
+            if is_king_safe:
+                distance = manhanttan_distance(threatened_position, king_position)
+                return (2 - distance) * base_value if distance <= 1 else 0
+            else:
+                distance = manhanttan_distance(threatened_position, king_position)
+                return (3 - distance) / 2 * base_value if distance <= 2 else 0
+        
+        def calculate_pinned_value(threatened_position):
+            if threatened_position == king_position:
+                if is_king_safe:
+                    return 70
+                else:
+                    return 100
+            else:
+                return 0
+            
+        def calculate_direction(pin_position, threatened_positions, max_value):
+            row, col = pin_position
+            if xiangqi.board[row][col] is None:
+                return max(max_value,
+                    calculate_not_pinned_value(threatened_positions[0]),
+                    calculate_not_pinned_value(threatened_positions[1]))
+            else:
+                return max(max_value,
+                    calculate_pinned_value(threatened_positions[0]),
+                    calculate_pinned_value(threatened_positions[1]))
+        
+        row, col = position
+        max_value = 0
+        if row >= 2:
+            max_value = calculate_direction((row - 1, col),
+                ((row - 2, col - 1), (row - 2, col + 1)),
+                max_value)
+        if row <= 7:
+            max_value = calculate_direction((row + 1, col),
+                ((row + 2, col - 1), (row + 2, col + 1)),
+                max_value)
+        if col >= 5:
+            max_value = calculate_direction((row, col - 1),
+                ((row - 1, col - 2), (row + 1, col - 2)),
+                max_value)
+        if col <= 3:
+            max_value = calculate_direction((row, col + 1),
+                ((row - 1, col + 2), (row + 1, col + 2)),
+                max_value)
+        bonus_value = max_value * min(side_value / 2000, 1)
+        return bonus_value if self.turn else -bonus_value
 
 
 class Rook(Piece):
@@ -1294,6 +1469,63 @@ class Rook(Piece):
     
     def to_string():
         return 'R'
+    
+    def value(self, position):
+        return 900 if self.turn else -900
+    
+    def activity(self, xiangqi, position):
+        """Rook strength is dependent on how many squares it can move to.
+        Use values between 0.5 - 1 so that actual piece value does not go too low.
+        Count the values beyond the first piece, because the rook can still influence the space beyond.
+        """
+        def inspect_col(col, row_range, action_count):
+            piece_count = 0
+            is_enemy = True
+            for row in row_range:
+                if xiangqi.board[row][col] is None:
+                    if piece_count == 0:
+                        action_count += 1
+                    elif is_enemy:
+                        action_count += 0.2
+                    else:
+                        action_count += 0.8
+                elif piece_count == 1:
+                    action_count += 1
+                    break
+                else:
+                    action_count += 1
+                    piece_count += 1
+                    is_enemy = xiangqi.board[row][col].turn != self.turn
+            return action_count
+        
+        def inspect_row(row, col_range, action_count):
+            piece_count = 0
+            is_enenmy = True
+            for col in col_range:
+                if xiangqi.board[row][col] is None:
+                    if piece_count == 0:
+                        action_count += 1
+                    elif is_enemy:
+                        action_count += 0.2
+                    else:
+                        action_count += 0.8
+                elif piece_count == 1:
+                    action_count += 1
+                    break
+                else:
+                    action_count += 1
+                    piece_count += 1
+                    is_enemy = xiangqi.board[row][col].turn != self.turn
+            return action_count
+        
+        action_count = inspect_col(position[1], range(position[0] + 1, 10), 0)
+        action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
+        action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
+        action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
+        return action_count / 17 * 0.4 + 0.6
+    
+    def bonus(self, xiangqi, position, values):
+        return 0
 
 
 class Cannon(Piece):
@@ -1345,6 +1577,84 @@ class Cannon(Piece):
     
     def to_string():
         return 'C'
+    
+    def value(self, position):
+        return 330 if self.turn else -330
+    
+    def activity(self, xiangqi, position):
+        """Cannon strength is evaluated based on the space beyond a platform.
+        0.5 for each space it can move to, and 1 for each space beyond a platform.
+        Even space after the second piece is counted, because cannon generally creates pressure even beyond the first platform.
+        Cannon has little influence to space beyond third piece, hence that space is not counted.
+        Use value between 0.5 - 1 so that actual piece value does not go too low.
+        """
+        def inspect_row(row, col_range, curr_action_count):
+            piece_count = 0
+            for col in col_range:
+                if piece_count == 3:
+                    break
+                if xiangqi.board[row][col] is not None:
+                    piece_count += 1
+                    if piece_count > 1:
+                        curr_action_count += 1
+                    continue
+                curr_action_count += 0.7 if piece_count == 0 else 1
+            return curr_action_count
+        
+        def inspect_col(col, row_range, curr_action_count):
+            piece_count = 0
+            for row in row_range:
+                if piece_count == 3:
+                    break
+                if xiangqi.board[row][col] is not None:
+                    piece_count += 1
+                    if piece_count > 1:
+                        curr_action_count += 1
+                    continue
+                curr_action_count += 0.7 if piece_count == 0 else 1
+            return curr_action_count
+        
+        action_count = inspect_row(position[0], range(position[1] + 1, 9), 0)
+        action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
+        action_count = inspect_col(position[1], range(position[0] + 1, 10), action_count)
+        action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
+        return action_count / 15 * 0.5 + 0.5
+    
+    def bonus(self, xiangqi, position, values):
+        """Bonus is added for empty cannons, i.e. cannon facing king directly without any piece in between.
+        """
+        if self.turn:
+            side_value = values[0]
+            king_position = xiangqi.king_positions[1]
+        else:
+            side_value = values[1]
+            king_position = xiangqi.king_positions[0]
+        
+        def inspect_row(row, col, base_value):
+            if base_value > 0 or row != king_position[0]:
+                return base_value
+            for col in (range(col + 1, 9) if king_position[1] > col else range(col - 1, -1, -1)):
+                if xiangqi.board[row][col] is None:
+                    continue
+                if not xiangqi.is_enemy_piece_type((row, col), King):
+                    return 0
+                return 900
+        
+        def inspect_col(row, col, base_value):
+            if base_value > 0 or col != king_position[1]:
+                return base_value
+            for row in (range(row + 1, 10) if king_position[0] > row else range(row - 1, -1, -1)):
+                if xiangqi.board[row][col] is None:
+                    continue
+                if not xiangqi.is_enemy_piece_type((row, col), King):
+                    return 0
+                return 900
+
+        row, col = position
+        base_value = inspect_row(row, col, 0)
+        base_value = inspect_col(row, col, base_value)
+        bonus_value = base_value * min(side_value / 2000, 1)
+        return bonus_value if self.turn else -bonus_value
 
 
 class Pawn(Piece):
@@ -1376,3 +1686,35 @@ class Pawn(Piece):
     
     def to_string():
         return 'P'
+    
+    def value(self, position):
+        if self.turn:
+            if position[0] < 5:
+                return 160
+            else:
+                return 80
+        else:
+            if position[0] > 4:
+                return -160
+            else:
+                return -80
+            
+    def activity(self, xiangqi, position):
+        return 1
+    
+    def bonus(self, xiangqi, position, values):
+        """Pawn bonus is calculated based on Manhattan distance between pawn and king,
+        and is only counted if Manhanttan distance <= 3
+        """
+        if self.turn:
+            side_value = values[0]
+            king_position = xiangqi.king_positions[1]
+        else:
+            side_value = values[1]
+            king_position = xiangqi.king_positions[0]
+        distance = manhanttan_distance(position, king_position)
+        if distance <= 3:
+            bonus_value = 200 * (4 - distance) / 2
+            return bonus_value if self.turn else -bonus_value
+        else:
+            return 0
