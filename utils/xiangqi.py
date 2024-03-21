@@ -1039,6 +1039,7 @@ class Piece:
         These bonuses are due to their threat on the opponent king.
         values is a tuple of 2 elements, which are the total values (with activity)
         of the same side and opponent side, respectively.
+        values[0] is a positive value, while values[1] is a negative value.
         A piece can only create threat to the king if it is supported by other pieces.
         Using total side value is not very accurate, because supporting pieces must be in good position as well, for piece to create threat.
         """
@@ -1424,7 +1425,7 @@ class Horse(Piece):
             max_value = calculate_direction((row, col + 1),
                 ((row - 1, col + 2), (row + 1, col + 2)),
                 max_value)
-        bonus_value = max_value * min(side_value / 2000, 1)
+        bonus_value = max_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
 
 
@@ -1636,7 +1637,7 @@ class Cannon(Piece):
             for col in (range(col + 1, 9) if king_position[1] > col else range(col - 1, -1, -1)):
                 if xiangqi.board[row][col] is None:
                     continue
-                if not xiangqi.is_enemy_piece_type((row, col), King):
+                if col != king_position[1]:
                     return 0
                 return 900
         
@@ -1646,14 +1647,14 @@ class Cannon(Piece):
             for row in (range(row + 1, 10) if king_position[0] > row else range(row - 1, -1, -1)):
                 if xiangqi.board[row][col] is None:
                     continue
-                if not xiangqi.is_enemy_piece_type((row, col), King):
+                if row != king_position[0]:
                     return 0
                 return 900
 
         row, col = position
         base_value = inspect_row(row, col, 0)
         base_value = inspect_col(row, col, base_value)
-        bonus_value = base_value * min(side_value / 2000, 1)
+        bonus_value = base_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
 
 

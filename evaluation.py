@@ -23,6 +23,7 @@ class Evaluation:
             for col, piece in enumerate(arr):
                 if piece is None:
                     continue
+                # print(piece, piece.bonus(xiangqi, (row, col), values))
                 bonus += piece.bonus(xiangqi, (row, col), values)
         
         # add value to the side taking the turn
