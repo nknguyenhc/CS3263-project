@@ -740,6 +740,12 @@ class CheckConstraint:
         """
         raise NotImplementedError
     
+    def is_check(self):
+        """Returns if this constraint represents a piece checking the king,
+        i.e. the opponent has to respond to the check.
+        """
+        raise NotImplementedError
+    
     def __repr__(self):
         return self.__str__()
 
@@ -768,6 +774,9 @@ class RookDiscoverCheckConstraint(CheckConstraint):
                 return False
             return (self.king_position[0] < move.to_coords[0] and move.to_coords[0] <= self.rook_position[0]) \
                 or (self.king_position[0] > move.to_coords[0] and move.to_coords[0] >= self.rook_position[0])
+    
+    def is_check(self):
+        return False
     
     def __str__(self):
         return f"<R-dconstraint, K: {self.king_position}, R: {self.rook_position}, p: {self.piece_position}>"
@@ -801,6 +810,9 @@ class CannonDiscoverTwoPiecesCheckConstraint(CheckConstraint):
             return (self.king_position[0] < move.to_coords[0] and move.to_coords[0] <= self.cannon_position[0]) \
                 or (self.king_position[0] > move.to_coords[0] and move.to_coords[0] >= self.cannon_position[0])
     
+    def is_check(self):
+        return False
+    
     def __str__(self):
         return f"<C2p-dconstraint, K: {self.king_position}, C: {self.cannon_position}, p: {self.piece_positions}>"
 
@@ -829,6 +841,9 @@ class CannonDiscoverNoPieceCheckConstraint(CheckConstraint):
             return (move.to_coords[0] < self.king_position[0] and move.to_coords[0] <= self.cannon_position[0]) \
                 or (move.to_coords[0] > self.king_position[0] and move.to_coords[0] >= self.cannon_position[0])
     
+    def is_check(self):
+        return False
+
     def __str__(self):
         return f"<C0p-dconstraint, K: {self.king_position}, C: {self.cannon_position}>"
 
@@ -846,6 +861,9 @@ class HorseDiscoverCheckConstraint(CheckConstraint):
             return True
         return move.to_coords == self.horse_position
     
+    def is_check(self):
+        return False
+
     def __str__(self):
         return f"<H-dconstraint, K: {self.king_position}, H: {self.horse_position}, p: {self.piece_position}>"
 
@@ -864,6 +882,9 @@ class KingDiscoverCheckConstraint(CheckConstraint):
             return True
         return move.to_coords[1] == self.piece_position[1]
     
+    def is_check(self):
+        return False
+
     def __str__(self):
         return f"<K-dconstraint, K: {self.king_position}, p: {self.piece_position}>"
 
@@ -893,6 +914,9 @@ class RookCheckConstraint(CheckConstraint):
             return (self.king_position[0] < move.to_coords[0] and move.to_coords[0] <= self.rook_position[0]) \
                 or (self.king_position[0] > move.to_coords[0] and move.to_coords[0] >= self.rook_position[0])
     
+    def is_check(self):
+        return True
+
     def __str__(self):
         return f"<R-constraint, K: {self.king_position}, R: {self.rook_position}>"
 
@@ -926,6 +950,9 @@ class CannonCheckConstraint(CheckConstraint):
             return (self.king_position[0] < move.to_coords[0] and move.to_coords[0] <= self.cannon_position[0]) \
                 or (self.king_position[0] > move.to_coords[0] and move.to_coords[0] >= self.cannon_position[0])
     
+    def is_check(self):
+        return True
+
     def __str__(self):
         return f"<C-constraint, K: {self.king_position}, C: {self.cannon_position}, p: {self.piece_position}>"
 
@@ -943,6 +970,9 @@ class HorseCheckConstraint(CheckConstraint):
         return move.from_coords == self.king_position or move.to_coords == self.horse_position \
             or move.to_coords == self.pin_position
     
+    def is_check(self):
+        return True
+
     def __str__(self):
         return f"<H-constraint, K: {self.king_position}, H: {self.horse_position}, pin: {self.pin_position}>"
 
@@ -957,6 +987,9 @@ class PawnCheckConstraint(CheckConstraint):
     def satisfies(self, move):
         return move.from_coords == self.king_position or move.to_coords == self.pawn_position
     
+    def is_check(self):
+        return True
+
     def __str__(self):
         return f"<P-constraint, K: {self.king_position}, P: {self.pawn_position}>"
 
@@ -986,6 +1019,61 @@ class Move:
     
     def __repr__(self):
         return self.__str__()
+    
+    def to_notation(self, xiangqi):
+        """Returns the notation of this move on the board.
+        """
+        first_half = self.obtain_first_half(xiangqi)
+        second_half = self.obtain_second_half(xiangqi)
+        return first_half + second_half
+    
+    def obtain_first_half(self, xiangqi):
+        piece_count, rank = self.piece_count(xiangqi, self.from_coords[1])
+        match piece_count:
+            case 1:
+                return self.piecetype.to_string() + str(self.col_index_to_num(self.from_coords[1], xiangqi.turn))
+            case 2:
+                return self.rank_to_sign(rank, xiangqi.turn) + self.piecetype.to_string()
+            case _:
+                return str(self.rank_to_num(piece_count, rank, xiangqi.turn)) + str(self.col_index_to_num(self.from_coords[1], xiangqi.turn))
+    
+    def obtain_second_half(self, xiangqi):
+        if self.to_coords[0] == self.from_coords[0]:
+            return '.' + str(self.col_index_to_num(self.to_coords[1], xiangqi.turn))
+        elif self.to_coords[0] > self.from_coords[0]:
+            sign = '-' if xiangqi.turn else '+'
+        else:
+            sign = '+' if xiangqi.turn else '-'
+
+        if self.to_coords[1] == self.from_coords[1]:
+            return sign + str(abs(self.to_coords[0] - self.from_coords[0]))
+        else:
+            return sign + str(self.col_index_to_num(self.to_coords[1], xiangqi.turn))
+    
+    def piece_count(self, xiangqi, col):
+        piece_count = 0
+        for row in range(10):
+            if not xiangqi.is_friendly_piece_type((row, col), self.piecetype):
+                continue
+            piece_count += 1
+            if row == self.from_coords[0]:
+                rank = piece_count
+        return piece_count, rank
+    
+    def col_index_to_num(self, col, turn):
+        return 9 - col if turn else col + 1
+    
+    def rank_to_sign(self, rank, turn):
+        if rank == 1:
+            return '+' if turn else '-'
+        else: # rank == 2
+            return '-' if turn else '+'
+    
+    def rank_to_num(self, piece_count, rank, turn):
+        if turn:
+            return rank
+        else:
+            return piece_count - rank + 1
 
 
 class Piece:

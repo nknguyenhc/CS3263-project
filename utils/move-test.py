@@ -292,6 +292,116 @@ def test_load_board():
         [Rook(True), Horse(True), Elephant(True), Advisor(True), King(True), Advisor(True), Elephant(True), None, None],
     ])
 
+def test_move_notation_no_duplicate():
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, Pawn(True), None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Horse(True), None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, Cannon(True), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, Rook(True), None],
+        [None, None, None, None, King(True), None, None, None, None],
+    ])
+    move = Move(Horse, (5, 0), (3, 1))
+    assert move.to_notation(board) == 'H9+8'
+    move = Move(Horse, (5, 0), (6, 2))
+    assert move.to_notation(board) == 'H9-7'
+    move = Move(Cannon, (6, 6), (3, 6))
+    assert move.to_notation(board) == 'C3+3'
+    move = Move(Rook, (8, 7), (8, 0))
+    assert move.to_notation(board) == 'R2.9'
+    move = Move(Rook, (8, 7), (9, 7))
+    assert move.to_notation(board) == 'R2-1'
+    move = Move(Pawn, (2, 2), (2, 1))
+    assert move.to_notation(board) == 'P7.8'
+
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, Cannon(False), None, None, None, None, None, None, None],
+        [None, Rook(False), None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, Horse(False), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, Pawn(False), None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, Horse(True), None, None, King(True), None, None, None, None],
+    ], turn=False)
+    move = Move(Cannon, (2, 1), (9, 1))
+    assert move.to_notation(board) == 'C2+7'
+    move = Move(Cannon, (2, 1), (0, 1))
+    assert move.to_notation(board) == 'C2-2'
+    move = Move(Rook, (3, 1), (3, 4))
+    assert move.to_notation(board) == 'R2.5'
+    move = Move(Horse, (4, 6), (5, 4))
+    assert move.to_notation(board) == 'H7+5'
+    move = Move(Horse, (4, 6), (2, 7))
+    assert move.to_notation(board) == 'H7-8'
+    move = Move(Pawn, (6, 7), (7, 7))
+    assert move.to_notation(board) == 'P8+1'
+
+def test_move_notation_duplicate():
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, Horse(True), None, None],
+        [None, None, Pawn(True), None, None, None, None, None, None],
+        [None, None, None, None, None, None, Horse(True), None, None],
+        [None, None, Pawn(True), None, None, None, None, None, None],
+        [None, Rook(True), None, None, None, None, Elephant(True), None, None],
+        [None, None, Pawn(True), None, None, None, None, None, Cannon(True)],
+        [None, Rook(True), None, Advisor(True), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, Cannon(True)],
+        [None, None, None, Advisor(True), King(True), None, Elephant(True), None, None],
+    ])
+    move = Move(Rook, (5, 1), (4, 1))
+    assert move.to_notation(board) == '+R+1'
+    move = Move(Rook, (7, 1), (7, 2))
+    assert move.to_notation(board) == '-R.7'
+    move = Move(Pawn, (2, 2), (1, 2))
+    assert move.to_notation(board) == '17+1'
+    move = Move(Pawn, (4, 2), (4, 3))
+    assert move.to_notation(board) == '27.6'
+    move = Move(Pawn, (6, 2), (5, 2))
+    assert move.to_notation(board) == '37+1'
+    move = Move(Advisor, (7, 3), (8, 4))
+    assert move.to_notation(board) == '+A-5'
+    move = Move(Advisor, (9, 3), (8, 4))
+    assert move.to_notation(board) == '-A+5'
+    move = Move(Elephant, (5, 6), (7, 4))
+    assert move.to_notation(board) == '+E-5'
+    move = Move(Elephant, (9, 6), (7, 8))
+    assert move.to_notation(board) == '-E+1'
+    move = Move(Horse, (1, 6), (0, 8))
+    assert move.to_notation(board) == '+H+1'
+    move = Move(Horse, (3, 6), (1, 5))
+    assert move.to_notation(board) == '-H+4'
+    move = Move(Cannon, (8, 8), (9, 8))
+    assert move.to_notation(board) == '-C-1'
+
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, Advisor(False), None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, Advisor(False), None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, Pawn(False), None],
+        [None, None, None, None, None, None, None, Pawn(False), None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+    ], turn=False)
+    move = Move(Advisor, (0, 5), (1, 4))
+    assert move.to_notation(board) == '-A+5'
+    move = Move(Advisor, (2, 5), (1, 4))
+    assert move.to_notation(board) == '+A-5'
+    move = Move(Pawn, (6, 7), (6, 6))
+    assert move.to_notation(board) == '-P.7'
+    move = Move(Pawn, (7, 7), (8, 7))
+    assert move.to_notation(board) == '+P+1'
+
 def main():
     test_king_move()
     test_advisor_move()
@@ -304,6 +414,8 @@ def main():
     test_pawn_order_move()
     test_board_str()
     test_load_board()
+    test_move_notation_no_duplicate()
+    test_move_notation_duplicate()
 
 if __name__ == '__main__':
     main()
