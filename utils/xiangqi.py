@@ -8,16 +8,18 @@ class Xiangqi():
     red_king_positions = set([(i, j) for i in range(7, 10) for j in range(3, 6)])
     black_king_positions = set([(i, j) for i in range(0, 3) for j in range(3, 6)])
 
-    def __init__(self, board=None, turn=True, king_positions=None):
+    def __init__(self, board=None, turn=True, king_positions=None, copy=True):
         """Instantiates a new board.
         Board is either not given, which means a default board,
         or an array of 10x9, each element is either None or an instance of Piece class.
         If board is given, assume that it is valid.
         Turn is true if it is red player's turn (first), or False if it is black player's turn (second).
         We do deepcopy here to prevent shared usage elsewhere.
+        `copy` flag is to indicate whether to deep copy. Turn this to False only if
+        this board is readonly, i.e. inputs are not mutated in this instance.
         """
         if board:
-            self.board = deepcopy(board)
+            self.board = deepcopy(board) if copy else board
         else:
             self.board = [
                 [Rook(False), Horse(False), Elephant(False), Advisor(False), King(False),
@@ -37,7 +39,7 @@ class Xiangqi():
             ]
         self.turn = turn
         if king_positions:
-            self.king_positions = deepcopy(king_positions)
+            self.king_positions = deepcopy(king_positions) if copy else king_positions
         else:
             self.king_positions = self.find_king_positions()
 
@@ -1096,6 +1098,14 @@ class Piece:
         """
         raise NotImplementedError
 
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        """Returns a list of tuples, each tuple with x-y coordinates,
+        indicating the cells that this piece can influence on,
+        including cells with friendly pieces.
+        Subclasses should override this method.
+        """
+        raise NotImplementedError
+
     def to_string():
         """Returns the string representation of the class,
         not associated with any particular instance.
@@ -1262,6 +1272,29 @@ class King(Piece):
                 return False
         return False
 
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+        
+        cells = []
+        dest = (position[0] + 1, position[1])
+        if dest[0] <= (9 if self.turn else 2) and not self.is_move_exposing_check(xiangqi, dest, False):
+            cells.append(dest)
+        dest = (position[0] - 1, position[1])
+        if dest[0] >= (7 if self.turn else 0) and not self.is_move_exposing_check(xiangqi, dest, False):
+            cells.append(dest)
+        dest = (position[0], position[1] + 1)
+        if dest[1] <= 5 \
+                and not self.is_move_exposing_kings(position[1] + 1, xiangqi, position[0]) \
+                and not self.is_move_exposing_check(xiangqi, dest, True):
+            cells.append(dest)
+        dest = (position[0], position[1] - 1)
+        if dest[1] >= 3 \
+                and not self.is_move_exposing_kings(position[1] - 1, xiangqi, position[0]) \
+                and not self.is_move_exposing_check(xiangqi, dest, True):
+            cells.append(dest)
+        return cells
+
     def to_string():
         return 'K'
 
@@ -1309,6 +1342,23 @@ class Advisor(Piece):
                         if xiangqi.can_move_to(dest):
                             actions.append(Move(Advisor, position, dest))
                     return actions
+    
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        if self.turn:
+            match position:
+                case (9, 3) | (9, 5) | (7, 3) | (7, 5):
+                    return [(8, 4)]
+                case (8, 4):
+                    return [(9, 3), (9, 5), (7, 3), (7, 5)]
+        else:
+            match position:
+                case (0, 3) | (0, 5) | (2, 3) | (2, 5):
+                    return [(1, 4)]
+                case (1, 4):
+                    return [(0, 3), (0, 5), (2, 3), (2, 5)]
 
     def to_string():
         return 'A'
@@ -1352,6 +1402,28 @@ class Elephant(Piece):
                 and xiangqi.can_move_to((position[0] - 2, position[1] - 2)):
             actions.append(Move(Elephant, position, (position[0] - 2, position[1] - 2)))
         return actions
+
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        if self.turn:
+            min_row = 5
+            max_row = 9
+        else:
+            min_row = 0
+            max_row = 4
+
+        cells = []
+        if position[0] + 2 <= max_row and position[1] + 2 <= 8 and xiangqi.board[position[0] + 1][position[1] + 1] is None:
+            cells.append((position[0] + 2, position[1] + 2))
+        if position[0] + 2 <= max_row and position[1] - 2 >= 0 and xiangqi.board[position[0] + 1][position[1] - 1] is None:
+            cells.append((position[0] + 2, position[1] - 2))
+        if position[0] - 2 >= min_row and position[1] + 2 <= 8 and xiangqi.board[position[0] - 1][position[1] + 1] is None:
+            cells.append((position[0] - 2, position[1] + 2))
+        if position[0] - 2 >= min_row and position[1] - 2 >= 0 and xiangqi.board[position[0] - 1][position[1] - 1] is None:
+            cells.append((position[0] - 2, position[1] - 2))
+        return cells
 
     def to_string():
         return 'E'
@@ -1415,6 +1487,33 @@ class Horse(Piece):
             if position[0] - 1 >= 0 and xiangqi.can_move_to((position[0] - 1, position[1] - 2)):
                 actions.append(Move(Horse, position, (position[0] - 1, position[1] - 2)))
         return actions
+
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        cells = []
+        if position[0] + 2 <= 9 and xiangqi.board[position[0] + 1][position[1]] is None:
+            if position[1] + 1 <= 8:
+                cells.append((position[0] + 2, position[1] + 1))
+            if position[1] - 1 >= 0:
+                cells.append((position[0] + 2, position[1] - 1))
+        if position[0] - 2 >= 0 and xiangqi.board[position[0] - 1][position[1]] is None:
+            if position[1] + 1 <= 8:
+                cells.append((position[0] - 2, position[1] + 1))
+            if position[1] - 1 >= 0:
+                cells.append((position[0] - 2, position[1] - 1))
+        if position[1] + 2 <= 8 and xiangqi.board[position[0]][position[1] + 1] is None:
+            if position[0] + 1 <= 9:
+                cells.append((position[0] + 1, position[1] + 2))
+            if position[0] - 1 >= 0:
+                cells.append((position[0] - 1, position[1] + 2))
+        if position[1] - 2 >= 0 and xiangqi.board[position[0]][position[1] - 1] is None:
+            if position[0] + 1 <= 9:
+                cells.append((position[0] + 1, position[1] - 2))
+            if position[0] - 1 >= 0:
+                cells.append((position[0] - 1, position[1] - 2))
+        return cells
 
     def to_string():
         return 'H'
@@ -1559,6 +1658,29 @@ class Rook(Piece):
                 actions.append(Move(Rook, position, (position[0], j)))
             break
         return actions
+    
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        cells = []
+        for i in range(position[0] + 1, 10):
+            cells.append((i, position[1]))
+            if xiangqi.board[i][position[1]] is not None:
+                break
+        for i in range(position[0] - 1, -1, -1):
+            cells.append((i, position[1]))
+            if xiangqi.board[i][position[1]] is not None:
+                break
+        for j in range(position[1] + 1, 9):
+            cells.append((position[0], j))
+            if xiangqi.board[position[0]][j] is not None:
+                break
+        for j in range(position[1] - 1, -1, -1):
+            cells.append((position[0], j))
+            if xiangqi.board[position[0]][j] is not None:
+                break
+        return cells
 
     def to_string():
         return 'R'
@@ -1671,6 +1793,46 @@ class Cannon(Piece):
                     break
             break
         return actions
+
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        cells = []
+        row, col = position
+        for i in range(row + 1, 10):
+            if xiangqi.board[i][col] is None:
+                continue
+            for ii in range(i + 1, 10):
+                cells.append((ii, col))
+                if xiangqi.board[ii][col] is not None:
+                    break
+            break
+        for i in range(row - 1, -1, -1):
+            if xiangqi.board[i][col] is None:
+                continue
+            for ii in range(i - 1, -1, -1):
+                cells.append((ii, col))
+                if xiangqi.board[ii][col] is not None:
+                    break
+            break
+        for j in range(col + 1, 9):
+            if xiangqi.board[row][j] is None:
+                continue
+            for jj in range(j + 1, 9):
+                cells.append((row, jj))
+                if xiangqi.board[row][jj] is not None:
+                    break
+            break
+        for j in range(col - 1, -1, -1):
+            if xiangqi.board[row][j] is None:
+                continue
+            for jj in range(j - 1, -1, -1):
+                cells.append((row, jj))
+                if xiangqi.board[row][jj] is not None:
+                    break
+            break
+        return cells
 
     def to_string():
         return 'C'
@@ -1785,6 +1947,30 @@ class Pawn(Piece):
                 if position[1] < 8 and xiangqi.can_move_to((position[0], position[1] + 1)):
                     actions.append(Move(Pawn, position, (position[0], position[1] + 1)))
         return actions
+    
+    def get_reachable_cells(self, xiangqi: Xiangqi, position):
+        if xiangqi.turn != self.turn:
+            return []
+
+        cells = []
+        row, col = position
+        if self.turn:
+            if row > 0:
+                cells.append((row - 1, col))
+            if row <= 4:
+                if col > 0:
+                    cells.append((row, col - 1))
+                if col < 8:
+                    cells.append((row, col + 1))
+        else:
+            if row < 9 and xiangqi.can_move_to((row + 1, col)):
+                cells.append((row + 1, col))
+            if row >= 5:
+                if col > 0:
+                    cells.append((row, col - 1))
+                if col < 8:
+                    cells.append((row, col + 1))
+        return cells
 
     def to_string():
         return 'P'

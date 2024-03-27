@@ -18,6 +18,9 @@ def test_king_move():
         Move(King, (8, 4), (7, 4)),
         Move(King, (8, 4), (8, 5)),
     }
+    assert set(King(True).get_reachable_cells(board, (8, 4))) == {
+        (9, 4), (7, 4), (8, 5),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, King(False), None, None, None, None, None],
@@ -34,6 +37,7 @@ def test_king_move():
     assert set(board.actions()) == {
         Move(King, (0, 3), (1, 3)),
     }
+    assert set(King(False).get_reachable_cells(board, (0, 3))) == {(1, 3)}
 
     board = Xiangqi(board=[
         [None, None, None, King(False), None, None, None, None, None],
@@ -52,6 +56,9 @@ def test_king_move():
         Move(King, (8, 5), (7, 5)),
         Move(King, (8, 5), (8, 4)),
     }
+    assert set(King(True).get_reachable_cells(board, (8, 5))) == {
+        (9, 5), (7, 5), (8, 4),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, King(False), None, None, None, None, None],
@@ -68,6 +75,9 @@ def test_king_move():
     assert set(board.actions()) == {
         Move(King, (0, 3), (1, 3)),
         Move(King, (0, 3), (0, 4)),
+    }
+    assert set(King(False).get_reachable_cells(board, (0, 3))) == {
+        (1, 3), (0, 4),
     }
 
     board = Xiangqi(board=[
@@ -87,6 +97,9 @@ def test_king_move():
         Move(King, (8, 3), (7, 3)),
         Move(King, (8, 3), (8, 4)),
     }
+    assert set(King(True).get_reachable_cells(board, (8, 3))) == {
+        (9, 3), (7, 3), (8, 4),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, None, None, None, None, None],
@@ -104,6 +117,9 @@ def test_king_move():
         Move(King, (1, 3), (0, 3)),
         Move(King, (1, 3), (2, 3)),
         Move(King, (1, 3), (1, 4)),
+    }
+    assert set(King(False).get_reachable_cells(board, (1, 3))) == {
+        (0, 3), (2, 3), (1, 4),
     }
 
 def test_advisor_move():
@@ -124,6 +140,11 @@ def test_advisor_move():
         Move(Advisor, (9, 3), (8, 4)),
         Move(King, (9, 4), (8, 4)),
     }
+    assert set(Advisor(True).get_reachable_cells(board, (9, 5))) == {(8, 4)}
+    assert set(Advisor(True).get_reachable_cells(board, (9, 3))) == {(8, 4)}
+    assert set(King(True).get_reachable_cells(board, (9, 4))) == {
+        (8, 4), (9, 5),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, King(False), None, None, None, None, None],
@@ -141,6 +162,9 @@ def test_advisor_move():
         Move(Advisor, (8, 4), (7, 3)),
         Move(Advisor, (8, 4), (7, 5)),
         Move(Advisor, (8, 4), (9, 3)),
+    }
+    assert set(Advisor(True).get_reachable_cells(board, (8, 4))) == {
+        (7, 3), (7, 5), (9, 3), (9, 5),
     }
 
     board = Xiangqi(board=[
@@ -181,6 +205,9 @@ def test_elephant_move():
         Move(Elephant, (9, 6), (7, 8)),
         Move(Elephant, (9, 6), (7, 4)),
     }
+    assert set(Elephant(True).get_reachable_cells(board, (9, 6))) == {
+        (7, 8), (7, 4),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -199,6 +226,7 @@ def test_elephant_move():
         Move(King, (8, 5), (7, 5)),
         Move(Elephant, (9, 6), (7, 8)),
     }
+    assert set(Elephant(True).get_reachable_cells(board, (9, 6))) == {(7, 8)}
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -216,6 +244,9 @@ def test_elephant_move():
         Move(King, (9, 5), (8, 5)),
         Move(Elephant, (7, 8), (9, 6)),
         Move(Elephant, (7, 8), (5, 6)),
+    }
+    assert set(Elephant(True).get_reachable_cells(board, (7, 8))) == {
+        (9, 6), (5, 6),
     }
 
     board = Xiangqi(board=[
@@ -238,6 +269,9 @@ def test_elephant_move():
         Move(Elephant, (7, 4), (5, 2)),
         Move(Elephant, (7, 4), (5, 6)),
     }
+    assert set(Elephant(True).get_reachable_cells(board, (7, 4))) == {
+        (9, 2), (5, 2), (5, 6),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, None, None, None, None, None],
@@ -258,6 +292,9 @@ def test_elephant_move():
         Move(Elephant, (2, 4), (0, 6)),
         Move(Elephant, (2, 4), (4, 2)),
         Move(Elephant, (2, 4), (4, 6)),
+    }
+    assert set(Elephant(False).get_reachable_cells(board, (2, 4))) == {
+        (0, 6), (4, 2), (4, 6),
     }
 
 def test_horse_move():
@@ -284,6 +321,9 @@ def test_horse_move():
         Move(Horse, (5, 3), (6, 1)),
         Move(Horse, (5, 3), (7, 2)),
     }
+    assert set(Horse(True).get_reachable_cells(board, (5, 3))) == {
+        (7, 4), (6, 5), (4, 5), (3, 4), (3, 2), (4, 1), (6, 1), (7, 2),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -306,6 +346,9 @@ def test_horse_move():
         Move(Horse, (5, 3), (3, 2)),
         Move(Horse, (5, 3), (7, 2)),
     }
+    assert set(Horse(True).get_reachable_cells(board, (5, 3))) == {
+        (7, 4), (6, 5), (4, 5), (3, 4), (3, 2), (7, 2),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -324,6 +367,9 @@ def test_horse_move():
         Move(Horse, (9, 6), (7, 5)),
         Move(Horse, (9, 6), (7, 7)),
         Move(Horse, (9, 6), (8, 8)),
+    }
+    assert set(Horse(True).get_reachable_cells(board, (9, 6))) == {
+        (7, 5), (7, 7), (8, 8),
     }
 
     board = Xiangqi(board=[
@@ -346,6 +392,9 @@ def test_horse_move():
         Move(Horse, (8, 6), (6, 7)),
         Move(Horse, (8, 6), (7, 8)),
         Move(Horse, (8, 6), (9, 8)),
+    }
+    assert set(Horse(True).get_reachable_cells(board, (8, 6))) == {
+        (9, 4), (7, 4), (6, 5), (6, 7), (7, 8), (9, 8),
     }
 
 def test_rook_move():
@@ -381,6 +430,10 @@ def test_rook_move():
         Move(Rook, (7, 6), (7, 1)),
         Move(Rook, (7, 6), (7, 0)),
     }
+    assert set(Rook(True).get_reachable_cells(board, (7, 6))) == {
+        (8, 6), (9, 6), (6, 6), (5, 6), (4, 6), (3, 6), (2, 6), (1, 6), (0, 6),
+        (7, 7), (7, 8), (7, 5), (7, 4), (7, 3), (7, 2), (7, 1), (7, 0),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -406,6 +459,10 @@ def test_rook_move():
         Move(Rook, (7, 6), (7, 8)),
         Move(Rook, (7, 6), (7, 5)),
         Move(Rook, (7, 6), (7, 4)),
+    }
+    assert set(Rook(True).get_reachable_cells(board, (7, 6))) == {
+        (8, 6), (9, 6), (6, 6), (5, 6), (4, 6), (3, 6),
+        (7, 7), (7, 8), (7, 5), (7, 4), (7, 3),
     }
 
 def test_cannon_move():
@@ -441,6 +498,7 @@ def test_cannon_move():
         Move(Cannon, (7, 6), (7, 1)),
         Move(Cannon, (7, 6), (7, 0)),
     }
+    assert set(Cannon(True).get_reachable_cells(board, (7, 6))) == set()
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
@@ -469,6 +527,9 @@ def test_cannon_move():
         Move(Cannon, (7, 6), (7, 2)),
         Move(Cannon, (7, 6), (7, 1)),
     }
+    assert set(Cannon(True).get_reachable_cells(board, (7, 6))) == {
+        (0, 6), (1, 6), (2, 6),
+    }
 
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, Elephant(False), None, None],
@@ -493,6 +554,9 @@ def test_cannon_move():
         Move(Cannon, (7, 6), (7, 7)),
         Move(Cannon, (7, 6), (7, 8)),
         Move(Cannon, (7, 6), (7, 0)),
+    }
+    assert set(Cannon(True).get_reachable_cells(board, (7, 6))) == {
+        (1, 6), (2, 6), (7, 4), (7, 3), (7, 2), (7, 1), (7, 0)
     }
 
     board = Xiangqi(board=[
@@ -521,6 +585,9 @@ def test_cannon_move():
         Move(Pawn, (1, 6), (1, 7)),
         Move(Pawn, (1, 6), (0, 6)),
     }
+    assert set(Cannon(True).get_reachable_cells(board, (7, 6))) == {
+        (1, 6), (2, 6), (7, 4), (7, 3), (7, 2), (7, 1), (7, 0),
+    }
 
 def test_pawn_move():
     board = Xiangqi(board=[
@@ -542,6 +609,10 @@ def test_pawn_move():
         Move(Pawn, (3, 6), (2, 6)),
         Move(Pawn, (6, 0), (5, 0)),
     }
+    assert set(Pawn(True).get_reachable_cells(board, (3, 6))) == {
+        (3, 7), (3, 5), (2, 6),
+    }
+    assert set(Pawn(True).get_reachable_cells(board, (6, 0))) == {(5, 0)}
 
     board = Xiangqi(board=[
         [None, None, None, King(False), None, None, None, None, None],
@@ -560,6 +631,10 @@ def test_pawn_move():
         Move(Pawn, (3, 6), (4, 6)),
         Move(Pawn, (6, 0), (6, 1)),
         Move(Pawn, (6, 0), (7, 0)),
+    }
+    assert set(Pawn(False).get_reachable_cells(board, (3, 6))) == {(4, 6)}
+    assert set(Pawn(False).get_reachable_cells(board, (6, 0))) == {
+        (6, 1), (7, 0),
     }
 
 def test_rook_discover_check_constraint():

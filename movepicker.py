@@ -11,13 +11,13 @@ class Pieces:
 
 class MovePicker:
     piece_to_threat = {
-        King: 0,
-        Rook: 0,
-        Horse: 1,
-        Cannon: 1,
-        Advisor: 2,
-        Elephant: 2,
-        Pawn: 3
+        King: 1,
+        Rook: 1,
+        Horse: 2,
+        Cannon: 2,
+        Advisor: 3,
+        Elephant: 3,
+        Pawn: 4,
     }
 
     def __init__(self, xiangqi):
@@ -75,24 +75,33 @@ class MovePicker:
         The returned value is a 2D array, each element corresponds to the position in the board.
         The lower the value of the attacker, the higher the threat.
         Each element has either one of the following value:
-        0: no threat/threat by rook/king
-        1: threat by cannon/horse
-        2: threat by advisor/elephant
-        3: threat by pawn
+        0: no threat
+        1: threat by rook/king
+        2: threat by cannon/horse
+        3: threat by advisor/elephant
+        4: threat by pawn
         """
-        reverse_board = Xiangqi(board=self.xiangqi.board, turn=not self.xiangqi.turn, king_positions=self.xiangqi.king_positions)
-        enemy_moves = reverse_board.actions()
+        reverse_board = Xiangqi(
+            board=self.xiangqi.board,
+            turn=not self.xiangqi.turn,
+            king_positions=self.xiangqi.king_positions,
+            copy=False)
         threats = [[0 for i in range(9)] for j in range(10)]
-        for move in enemy_moves:
-            row, col = move.to_coords
-            threats[row][col] = max(threats[row][col], MovePicker.piece_to_threat[move.piecetype])
+        for i, row in enumerate(reverse_board.board):
+            for j, piece in enumerate(row):
+                if piece is None:
+                    continue
+                for threatened_cell in piece.get_reachable_cells(reverse_board, (i, j)):
+                    ii, jj = threatened_cell
+                    threats[ii][jj] = max(threats[ii][jj], MovePicker.piece_to_threat[piece.__class__])
         return threats
     
     def score(self, move, threats):
         """Returns the score of the given move.
         See explanation for move_order above.
 
-        For captures, if value of attacker <= value of victim, it is a good capture,
+        For captures, if value of attacker <= value of victim,
+        or if there is no threat at the target position (threat level = 0), it is a good capture,
         otherwise it is a bad capture. Note that SEE is not yet implemented.
 
         Good captures have value of at least 2000.
@@ -108,7 +117,8 @@ class MovePicker:
             piece_from = self.xiangqi.board[move.from_coords[0]][move.from_coords[1]]
             piece_to = self.xiangqi.board[move.to_coords[0]][move.to_coords[1]]
             difference = abs(piece_to.value(move.from_coords)) - abs(piece_from.value(move.to_coords))
-            return 2000 + difference if difference >= 0 else difference
+            is_captured_piece_not_threatened = threats[move.to_coords[0]][move.to_coords[1]] == 0
+            return 2000 + max(difference, 0) if difference >= 0 or is_captured_piece_not_threatened else difference
         
     def get_bonus(self, piecetype, position, threats):
         """Obtains the bonus/malus if a piece moves into/away from the position.
@@ -117,13 +127,13 @@ class MovePicker:
         threat_value = threats[position[0]][position[1]]
         match piecetype:
             case Pieces.ROOK:
-                return 1500 if threat_value >= 1 else 0
+                return 1500 if threat_value >= 2 else 0
             case Pieces.KING:
                 return 0 # Do not add bonus on king movement
             case Pieces.HORSE | Pieces.CANNON:
-                return 750 if threat_value >= 2 else 0
+                return 750 if threat_value >= 3 else 0
             case Pieces.ADVISOR | Pieces.ELEPHANT | Pieces.PAWN:
-                return 400 if threat_value >= 3 else 0
+                return 400 if threat_value >= 4 else 0
     
     def is_check(self, move):
         """Determines if the given move results in a check.
