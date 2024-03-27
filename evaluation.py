@@ -1,7 +1,7 @@
 from utils.xiangqi import Xiangqi
 
 class Evaluation:
-    def evaluate(self, xiangqi):
+    def evaluate(self, xiangqi: Xiangqi):
         # calculate material value and piece activities
         red_value = 0 # will be a positive value
         black_value = 0 # will be a negative value

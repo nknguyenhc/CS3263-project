@@ -1,9 +1,9 @@
 from utils.xiangqi import Xiangqi, InvalidMoveException
-from randomalgo import RandomAlgo
+from PValgo import PVAlgo
 import sys
 
 # Replace this line with your algo
-algo = RandomAlgo()
+algo = PVAlgo()
 
 def main():
     print('Welcome! In this programme, you can test out your algorithm by manually playing against it.')
@@ -17,7 +17,7 @@ def main():
     turn_string = input('Please decide if you want to play as red (go first) or black (go second): (R/B) ')
     while turn_string != 'R' and turn_string != 'B':
         turn_string = input('Invalid, please key in again: (R/B) ')
-    
+
     if turn_string == 'R':
         human_turn, algo_turn = True, False
     else:
@@ -41,7 +41,7 @@ def main():
         board = board.move(move)
         print()
         actions = board.actions()
-    
+
     print('Current board:')
     print(board)
     print()
