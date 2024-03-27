@@ -708,7 +708,7 @@ class Xiangqi():
 
     def __str__(self):
         def condense_row(row):
-            return ' '.join([str(piece) if piece else '  ' for piece in row])
+            return ' '.join([str(piece) if piece else '--' for piece in row])
 
         return '\n'.join([condense_row(row) for row in self.board]) + f'\nturn: {0 if self.turn else 1}'
 
@@ -1635,8 +1635,9 @@ class Cannon(Piece):
                 actions.append(Move(Cannon, position, (i, position[1])))
                 continue
             for ii in range(i + 1, 10):
-                if xiangqi.board[ii][position[1]] is not None and xiangqi.board[ii][position[1]].turn != self.turn:
-                    actions.append(Move(Cannon, position, (ii, position[1])))
+                if xiangqi.board[ii][position[1]] is not None:
+                    if xiangqi.board[ii][position[1]].turn != self.turn:
+                        actions.append(Move(Cannon, position, (ii, position[1])))
                     break
             break
         for i in range(position[0] - 1, -1, -1):
@@ -1644,8 +1645,9 @@ class Cannon(Piece):
                 actions.append(Move(Cannon, position, (i, position[1])))
                 continue
             for ii in range(i - 1, -1, -1):
-                if xiangqi.board[ii][position[1]] is not None and xiangqi.board[ii][position[1]].turn != self.turn:
-                    actions.append(Move(Cannon, position, (ii, position[1])))
+                if xiangqi.board[ii][position[1]] is not None:
+                    if xiangqi.board[ii][position[1]].turn != self.turn:
+                        actions.append(Move(Cannon, position, (ii, position[1])))
                     break
             break
         for j in range(position[1] + 1, 9):
@@ -1653,8 +1655,9 @@ class Cannon(Piece):
                 actions.append(Move(Cannon, position, (position[0], j)))
                 continue
             for jj in range(j + 1, 9):
-                if xiangqi.board[position[0]][jj] is not None and xiangqi.board[position[0]][jj].turn != self.turn:
-                    actions.append(Move(Cannon, position, (position[0], jj)))
+                if xiangqi.board[position[0]][jj] is not None:
+                    if xiangqi.board[position[0]][jj].turn != self.turn:
+                        actions.append(Move(Cannon, position, (position[0], jj)))
                     break
             break
         for j in range(position[1] - 1, -1, -1):
@@ -1662,8 +1665,9 @@ class Cannon(Piece):
                 actions.append(Move(Cannon, position, (position[0], j)))
                 continue
             for jj in range(j - 1, -1, -1):
-                if xiangqi.board[position[0]][jj] is not None and xiangqi.board[position[0]][jj].turn != self.turn:
-                    actions.append(Move(Cannon, position, (position[0], jj)))
+                if xiangqi.board[position[0]][jj] is not None:
+                    if xiangqi.board[position[0]][jj].turn != self.turn:
+                        actions.append(Move(Cannon, position, (position[0], jj)))
                     break
             break
         return actions
@@ -1743,6 +1747,9 @@ class Cannon(Piece):
                 if row != king_position[0]:
                     return 0
                 return 900
+            print(xiangqi)
+            print(position)
+            print(xiangqi.king_positions)
             assert False
 
         row, col = position

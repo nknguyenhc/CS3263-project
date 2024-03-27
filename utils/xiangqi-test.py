@@ -495,6 +495,33 @@ def test_cannon_move():
         Move(Cannon, (7, 6), (7, 0)),
     }
 
+    board = Xiangqi(board=[
+        [None, None, None, None, King(False), None, Elephant(False), None, None],
+        [None, None, None, None, None, None, Pawn(True), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, Pawn(False), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Pawn(False), None, None, None, None, King(True), Cannon(True), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (7, 5), (8, 5)),
+        Move(Cannon, (7, 6), (8, 6)),
+        Move(Cannon, (7, 6), (9, 6)),
+        Move(Cannon, (7, 6), (6, 6)),
+        Move(Cannon, (7, 6), (5, 6)),
+        Move(Cannon, (7, 6), (4, 6)),
+        Move(Cannon, (7, 6), (7, 7)),
+        Move(Cannon, (7, 6), (7, 8)),
+        Move(Cannon, (7, 6), (7, 0)),
+        Move(Pawn, (1, 6), (1, 5)),
+        Move(Pawn, (1, 6), (1, 7)),
+        Move(Pawn, (1, 6), (0, 6)),
+    }
+
 def test_pawn_move():
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
