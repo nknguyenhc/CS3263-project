@@ -1957,9 +1957,6 @@ class Cannon(Piece):
                 if row != king_position[0]:
                     return 0
                 return 900
-            print(xiangqi)
-            print(position)
-            print(xiangqi.king_positions)
             assert False
 
         row, col = position
