@@ -1,13 +1,13 @@
 from movepicker import MovePicker
-from utils.xiangqi import Xiangqi
+from utils.xiangqi import Xiangqi, MoveMode
 
 def test_board(filename):
     with open(f"sample-boards/{filename}.in", 'r') as f:
         board_string = f.read()
     board = Xiangqi.from_string(board_string)
     print(f"Picking moves in {filename}")
-    move_picker = MovePicker(board)
-    moves = [move["move"].to_notation(board) for move in move_picker.moves]
+    move_picker = MovePicker()
+    moves = [move.to_notation(board) for move in move_picker.move_order(board, MoveMode.ALL)]
     print(f"Result: {moves}")
 
 def main():

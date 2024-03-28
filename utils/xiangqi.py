@@ -1000,6 +1000,17 @@ class PawnCheckConstraint(CheckConstraint):
         return f"<P-constraint, K: {self.king_position}, P: {self.pawn_position}>"
 
 
+class MoveMode:
+    """Defines the categories of a move.
+    Each move must belong to at least 1 category.
+    """
+    UNDEFINED = 0
+    QUIET = 1
+    CAPTURE = 2
+    CHECK = 4
+    ALL = 7
+
+
 class Move:
     def __init__(self, piecetype, from_coords, to_coords):
         """Instantiates a new move object.
@@ -1010,6 +1021,30 @@ class Move:
         self.piecetype = piecetype
         self.from_coords = from_coords
         self.to_coords = to_coords
+        self.mode = 0 # cached value of mode, to be calculated when needed
+        self.value = 0 # value of a move, to be calculated when needed
+    
+    def get_mode(self, xiangqi: Xiangqi) -> int:
+        """Determines the mode of this move.
+        Returns the cached value if already calculated.
+        """
+        if self.mode:
+            return self.mode
+        
+        check_mode = MoveMode.CHECK if self._is_check(xiangqi) else 0
+        capture_mode = MoveMode.CAPTURE if self._is_capture(xiangqi) else 0
+        quiet_mode = MoveMode.QUIET if not capture_mode else 0
+        self.mode = check_mode | capture_mode | quiet_mode
+        return self.mode
+    
+    def _is_check(self, xiangqi: Xiangqi) -> bool:
+        next_board = xiangqi.move(self)
+        constraints = next_board.get_constraints()
+        return any([constraint.is_check() for constraint in constraints])
+    
+    def _is_capture(self, xiangqi: Xiangqi) -> bool:
+        row, col = self.to_coords
+        return xiangqi.board[row][col] is not None
 
     def __hash__(self):
         return hash((self.piecetype, self.from_coords, self.to_coords))
