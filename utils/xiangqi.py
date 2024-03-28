@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import chain
+import math
 
 def manhanttan_distance(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
@@ -1558,7 +1559,9 @@ class Horse(Piece):
 
     def activity(self, xiangqi, position):
         """Horse strength is dependent on whether it is pinned at its 4 sides.
-        Return value between 0.5 - 1.
+        Return value between 0.7 - 1.
+        Use a logarithm function so that horses with higher raw activity score has
+        lower difference in actual activity scores.
         """
         possible_direction_count = 0
         possible_move_count = 0
@@ -1579,7 +1582,7 @@ class Horse(Piece):
             possible_direction_count += 2
             if xiangqi.board[row][col + 1] is None:
                 possible_move_count += 2
-        return possible_move_count / possible_direction_count * 0.5 + 0.5
+        return math.log(possible_move_count + 2) / math.log(possible_direction_count + 2) * 0.2 + 0.8
 
     def bonus(self, xiangqi, position, values):
         """The bonus of the horse is if it threatens the king.
@@ -1726,6 +1729,8 @@ class Rook(Piece):
     def activity(self, xiangqi, position):
         """Rook strength is dependent on how many squares it can move to.
         Use values between 0.5 - 1 so that actual piece value does not go too low.
+        Use a logarithm function on the raw value so that rooks controlling more squares
+        have closer activity values than rooks controlling less squares.
         Count the values beyond the first piece, because the rook can still influence the space beyond.
         """
         def inspect_col(col, row_range, action_count):
@@ -1772,7 +1777,7 @@ class Rook(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        return action_count / 17 * 0.4 + 0.6
+        return math.log(action_count) / math.log(17) * 0.5 + 0.5
 
     def bonus(self, xiangqi, position, values):
         return 0
@@ -1881,6 +1886,8 @@ class Cannon(Piece):
         Even space after the second piece is counted, because cannon generally creates pressure even beyond the first platform.
         Cannon has little influence to space beyond third piece, hence that space is not counted.
         Use value between 0.5 - 1 so that actual piece value does not go too low.
+        Use a logarithm function so that cannons controlling more squares have smaller difference in activity
+        than cannons controlling less squares.
         """
         def inspect_row(row, col_range, curr_action_count):
             piece_count = 0
@@ -1912,7 +1919,7 @@ class Cannon(Piece):
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
         action_count = inspect_col(position[1], range(position[0] + 1, 10), action_count)
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
-        return action_count / 15 * 0.5 + 0.5
+        return math.log(action_count) / math.log(15) * 0.5 + 0.5
 
     def bonus(self, xiangqi, position, values):
         """Bonus is added for empty cannons, i.e. cannon facing king directly without any piece in between.
