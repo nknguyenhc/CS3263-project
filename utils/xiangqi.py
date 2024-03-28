@@ -1160,8 +1160,10 @@ class Piece:
             return False
         return self.turn == other.turn
 
-    def value(self, position):
+    def value(self, position, piece_count):
         """Returns the material value of this piece.
+        `position` indicates the position of this piece on the board.
+        `piece_count` is the total piece count of the board.
         """
         raise NotImplementedError
 
@@ -1334,7 +1336,7 @@ class King(Piece):
     def to_string():
         return 'K'
 
-    def value(self, position):
+    def value(self, position, piece_count):
         return 0
 
     def activity(self, xiangqi, position):
@@ -1399,7 +1401,7 @@ class Advisor(Piece):
     def to_string():
         return 'A'
 
-    def value(self, position):
+    def value(self, position, piece_count):
         return 150 if self.turn else -150
 
     def activity(self, xiangqi, position):
@@ -1464,7 +1466,7 @@ class Elephant(Piece):
     def to_string():
         return 'E'
 
-    def value(self, position):
+    def value(self, position, piece_count):
         return 150 if self.turn else -150
 
     def activity(self, xiangqi, position):
@@ -1554,8 +1556,10 @@ class Horse(Piece):
     def to_string():
         return 'H'
 
-    def value(self, position):
-        return 330 if self.turn else -330
+    def value(self, position, piece_count):
+        """The lower the `piece_count`, the higher the value of the horse.
+        """
+        return (1 if self.turn else -1) * (300 + 60 * (32 - piece_count) / 20)
 
     def activity(self, xiangqi, position):
         """Horse strength is dependent on whether it is pinned at its 4 sides.
@@ -1723,7 +1727,7 @@ class Rook(Piece):
     def to_string():
         return 'R'
 
-    def value(self, position):
+    def value(self, position, piece_count):
         return 900 if self.turn else -900
 
     def activity(self, xiangqi, position):
@@ -1877,8 +1881,10 @@ class Cannon(Piece):
     def to_string():
         return 'C'
 
-    def value(self, position):
-        return 330 if self.turn else -330
+    def value(self, position, piece_count):
+        """The higher the `piece_count`, the higher the value of a cannon
+        """
+        return (1 if self.turn else -1) * (280 + 100 * (piece_count) / 32)
 
     def activity(self, xiangqi, position):
         """Cannon strength is evaluated based on the space beyond a platform.
@@ -2017,7 +2023,7 @@ class Pawn(Piece):
     def to_string():
         return 'P'
 
-    def value(self, position):
+    def value(self, position, piece_count):
         if self.turn:
             if position[0] < 5:
                 return 160

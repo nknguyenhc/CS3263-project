@@ -2,6 +2,13 @@ from utils.xiangqi import Xiangqi
 
 class Evaluation:
     def evaluate(self, xiangqi: Xiangqi):
+        # count the number of pieces, for material value of cannons and horses
+        piece_count = 0
+        for row in xiangqi.board:
+            for piece in row:
+                if piece is not None:
+                    piece_count += 1
+
         # calculate material value and piece activities
         red_value = 0 # will be a positive value
         black_value = 0 # will be a negative value
@@ -10,7 +17,7 @@ class Evaluation:
                 if piece is None:
                     continue
                 # print(piece, piece.value((row, col)), piece.activity(xiangqi, (row, col)))
-                piece_value = piece.value((row, col)) * piece.activity(xiangqi, (row, col))
+                piece_value = piece.value((row, col), piece_count) * piece.activity(xiangqi, (row, col))
                 if piece_value > 0:
                     red_value += piece_value
                 else:
