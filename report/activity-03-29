@@ -1,0 +1,4 @@
+Evaluation: Add king safety
+Fork moves (double attacks): increase priority
+Activity/threats & support should take into account constraints
+Fix rook activity, increase coeff from 0.2 (prevent cannon C8+6)

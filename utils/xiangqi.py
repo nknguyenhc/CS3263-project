@@ -45,6 +45,7 @@ class Xiangqi():
             self.king_positions = self.find_king_positions()
         self.piece_count = None
         self.hash_value = None
+        self.constraints # cached constraints
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -133,13 +134,16 @@ class Xiangqi():
         return actions
 
     def get_constraints(self):
+        if self.constraints is not None:
+            return self.constraints
         king_position = self.king_positions[0] if self.turn else self.king_positions[1]
-        return list(chain.from_iterable([
+        self.constraints = list(chain.from_iterable([
             self.get_horse_constraints(king_position),
             self.get_cannon_and_rook_constraints(king_position),
             self.get_pawn_constraints(king_position),
             self.get_king_constraints(king_position, self.king_positions[1] if self.turn else self.king_positions[0]),
         ]))
+        return self.constraints
 
     def get_horse_constraints(self, king_position):
         constraints = []
@@ -1352,20 +1356,16 @@ class King(Piece):
         
         cells = []
         dest = (position[0] + 1, position[1])
-        if dest[0] <= (9 if self.turn else 2) and not self.is_move_exposing_check(xiangqi, dest, False):
+        if dest[0] <= (9 if self.turn else 2):
             cells.append(dest)
         dest = (position[0] - 1, position[1])
-        if dest[0] >= (7 if self.turn else 0) and not self.is_move_exposing_check(xiangqi, dest, False):
+        if dest[0] >= (7 if self.turn else 0):
             cells.append(dest)
         dest = (position[0], position[1] + 1)
-        if dest[1] <= 5 \
-                and not self.is_move_exposing_kings(position[1] + 1, xiangqi, position[0]) \
-                and not self.is_move_exposing_check(xiangqi, dest, True):
+        if dest[1] <= 5 and not self.is_move_exposing_kings(position[1] + 1, xiangqi, position[0]):
             cells.append(dest)
         dest = (position[0], position[1] - 1)
-        if dest[1] >= 3 \
-                and not self.is_move_exposing_kings(position[1] - 1, xiangqi, position[0]) \
-                and not self.is_move_exposing_check(xiangqi, dest, True):
+        if dest[1] >= 3 and not self.is_move_exposing_kings(position[1] - 1, xiangqi, position[0]):
             cells.append(dest)
         return cells
 
