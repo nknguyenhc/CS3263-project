@@ -44,6 +44,7 @@ class Xiangqi():
         else:
             self.king_positions = self.find_king_positions()
         self.piece_count = None
+        self.hash_value = None
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -733,6 +734,20 @@ class Xiangqi():
         if not isinstance(other, Xiangqi):
             return False
         return self.board == other.board and self.turn == other.turn
+    
+    def __hash__(self):
+        if self.hash_value is not None:
+            return self.hash_value
+        
+        board_tuple = tuple([tuple(row) for row in self.board])
+        self.hash_value = hash(board_tuple)
+        return self.hash_value
+    
+    def __eq__(self, other):
+        if not isinstance(other, Xiangqi):
+            return False
+        
+        return self.turn == other.turn and self.board == other.board
 
 
 class InvalidBoardException(Exception):
@@ -1195,6 +1210,16 @@ class Piece:
         Using total side value is not very accurate, because supporting pieces must be in good position as well, for piece to create threat.
         """
         raise NotImplementedError
+    
+    def __hash__(self):
+        """Each piece must be hashable.
+        """
+        raise NotImplementedError
+    
+    def __eq__(self, other):
+        """Each piece must be comparable.
+        """
+        raise NotImplementedError
 
 
 class King(Piece):
@@ -1355,6 +1380,15 @@ class King(Piece):
 
     def bonus(self, xiangqi, position, values):
         return 0
+    
+    def __hash__(self):
+        return 1
+    
+    def __eq__(self, other):
+        if not isinstance(other, King):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Advisor(Piece):
@@ -1420,6 +1454,15 @@ class Advisor(Piece):
 
     def bonus(self, xiangqi, position, values):
         return 0
+    
+    def __hash__(self):
+        return 2
+    
+    def __eq__(self, other):
+        if not isinstance(other, Advisor):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Elephant(Piece):
@@ -1504,6 +1547,15 @@ class Elephant(Piece):
 
     def bonus(self, xiangqi, position, values):
         return 0
+    
+    def __hash__(self):
+        return 4
+    
+    def __eq__(self, other):
+        if not isinstance(other, Elephant):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Horse(Piece):
@@ -1671,6 +1723,15 @@ class Horse(Piece):
                 max_value)
         bonus_value = max_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
+    
+    def __hash__(self):
+        return 8
+    
+    def __eq__(self, other):
+        if not isinstance(other, Horse):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Rook(Piece):
@@ -1796,6 +1857,15 @@ class Rook(Piece):
 
     def bonus(self, xiangqi, position, values):
         return 0
+    
+    def __hash__(self):
+        return 16
+    
+    def __eq__(self, other):
+        if not isinstance(other, Rook):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Cannon(Piece):
@@ -1975,6 +2045,15 @@ class Cannon(Piece):
         base_value = inspect_col(row, col, base_value)
         bonus_value = base_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
+    
+    def __hash__(self):
+        return 32
+    
+    def __eq__(self, other):
+        if not isinstance(other, Cannon):
+            return False
+        
+        return self.turn == other.turn
 
 
 class Pawn(Piece):
@@ -2062,3 +2141,12 @@ class Pawn(Piece):
             return bonus_value if self.turn else -bonus_value
         else:
             return 0
+        
+    def __hash__(self):
+        return 64
+    
+    def __eq__(self, other):
+        if not isinstance(other, Pawn):
+            return False
+        
+        return self.turn == other.turn

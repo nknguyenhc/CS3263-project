@@ -1397,6 +1397,12 @@ def test_horse_constrain_king():
     ])
     assert set(board.actions()) == set()
 
+def test_comparison():
+    board1 = Xiangqi()
+    board2 = Xiangqi()
+    assert board1 == board2
+    assert hash(board1) == hash(board2)
+
 def main():
     test_king_move()
     test_advisor_move()
@@ -1416,6 +1422,8 @@ def main():
     test_cannon_check_constraint()
     test_horse_check_constraint()
     test_pawn_check_constraint()
+
+    test_comparison()
 
 if __name__ == '__main__':
     main()
