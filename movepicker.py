@@ -123,7 +123,8 @@ class MovePicker:
         else:
             piece_from = xiangqi.board[move.from_coords[0]][move.from_coords[1]]
             piece_to = xiangqi.board[move.to_coords[0]][move.to_coords[1]]
-            difference = abs(piece_to.value(move.from_coords)) - abs(piece_from.value(move.to_coords))
+            piece_count = xiangqi.get_piece_count()
+            difference = abs(piece_to.value(move.from_coords, piece_count)) - abs(piece_from.value(move.to_coords, piece_count))
             is_captured_piece_not_threatened = threats[move.to_coords[0]][move.to_coords[1]] == 0
             return 2000 + max(difference, 0) if difference >= 0 or is_captured_piece_not_threatened else difference
         

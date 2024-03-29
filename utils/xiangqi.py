@@ -43,6 +43,7 @@ class Xiangqi():
             self.king_positions = deepcopy(king_positions) if copy else king_positions
         else:
             self.king_positions = self.find_king_positions()
+        self.piece_count = None
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -55,6 +56,16 @@ class Xiangqi():
                 else:
                     king_positions[1] = (i, j)
         return king_positions
+    
+    def get_piece_count(self):
+        if self.piece_count:
+            return self.piece_count
+        piece_count = 0
+        for row in self.board:
+            for piece in row:
+                if piece is not None:
+                    piece_count += 1
+        return piece_count
 
     def from_string(board_string):
         """Given a string representation of the board,

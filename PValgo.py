@@ -1,9 +1,9 @@
 from math import inf
 from time import time
 from utils.basealgo import BaseAlgo
-from utils.xiangqi import Move, Xiangqi
+from utils.xiangqi import Move, Xiangqi, MoveMode
 from evaluation import Evaluation
-
+from movepicker import MovePicker
 
 class SearchTimeout(Exception):
         pass
@@ -21,6 +21,7 @@ class PVAlgo(BaseAlgo):
 
     def __init__(self):
         self.evaluation = Evaluation() # TODO, use dep inject
+        self.movepicker = MovePicker()
 
     def quiescence(self, alpha: int, beta: int, depth=0):
         pass
@@ -46,8 +47,9 @@ class PVAlgo(BaseAlgo):
         # the principal variation
         is_pvs = False
         next_depth = depth - 1
-
-        for action in xiangqi.actions():
+        
+        moves = self.movepicker.move_order(xiangqi, mode=MoveMode.ALL)
+        for action in moves:
             next_xiangqi = xiangqi.move(action, in_place=False)
             info.ply += 1
 
