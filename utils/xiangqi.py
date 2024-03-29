@@ -1429,19 +1429,23 @@ class Advisor(Piece):
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
         if xiangqi.turn != self.turn:
             return []
+        
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Advisor, position, dest)) for constraint in constraints])
 
         if self.turn:
             match position:
                 case (9, 3) | (9, 5) | (7, 3) | (7, 5):
-                    return [(8, 4)]
+                    return [(8, 4)] if are_constraints_satisfied((8, 4)) else []
                 case (8, 4):
-                    return [(9, 3), (9, 5), (7, 3), (7, 5)]
+                    return [dest for dest in [(9, 3), (9, 5), (7, 3), (7, 5)] if are_constraints_satisfied(dest)]
         else:
             match position:
                 case (0, 3) | (0, 5) | (2, 3) | (2, 5):
-                    return [(1, 4)]
+                    return [(1, 4)] if are_constraints_satisfied((1, 4)) else []
                 case (1, 4):
-                    return [(0, 3), (0, 5), (2, 3), (2, 5)]
+                    return [dest for dest in [(0, 3), (0, 5), (2, 3), (2, 5)] if are_constraints_satisfied(dest)]
 
     def to_string():
         return 'A'
@@ -1506,16 +1510,21 @@ class Elephant(Piece):
             min_row = 0
             max_row = 4
 
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Elephant, position, dest)) for constraint in constraints])
+
         cells = []
-        if position[0] + 2 <= max_row and position[1] + 2 <= 8 and xiangqi.board[position[0] + 1][position[1] + 1] is None:
-            cells.append((position[0] + 2, position[1] + 2))
-        if position[0] + 2 <= max_row and position[1] - 2 >= 0 and xiangqi.board[position[0] + 1][position[1] - 1] is None:
-            cells.append((position[0] + 2, position[1] - 2))
-        if position[0] - 2 >= min_row and position[1] + 2 <= 8 and xiangqi.board[position[0] - 1][position[1] + 1] is None:
-            cells.append((position[0] - 2, position[1] + 2))
-        if position[0] - 2 >= min_row and position[1] - 2 >= 0 and xiangqi.board[position[0] - 1][position[1] - 1] is None:
-            cells.append((position[0] - 2, position[1] - 2))
-        return cells
+        row, col = position
+        if row + 2 <= max_row and col + 2 <= 8 and xiangqi.board[row + 1][col + 1] is None:
+            cells.append((row + 2, col + 2))
+        if row + 2 <= max_row and col - 2 >= 0 and xiangqi.board[row + 1][col - 1] is None:
+            cells.append((row + 2, col - 2))
+        if row - 2 >= min_row and col + 2 <= 8 and xiangqi.board[row - 1][col + 1] is None:
+            cells.append((row - 2, col + 2))
+        if row - 2 >= min_row and col - 2 >= 0 and xiangqi.board[row - 1][col - 1] is None:
+            cells.append((row - 2, col - 2))
+        return [cell for cell in cells if are_constraints_satisfied(cell)]
 
     def to_string():
         return 'E'
@@ -1592,29 +1601,34 @@ class Horse(Piece):
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
         if xiangqi.turn != self.turn:
             return []
+        
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Horse, position, dest)) for constraint in constraints])
 
         cells = []
-        if position[0] + 2 <= 9 and xiangqi.board[position[0] + 1][position[1]] is None:
-            if position[1] + 1 <= 8:
-                cells.append((position[0] + 2, position[1] + 1))
-            if position[1] - 1 >= 0:
-                cells.append((position[0] + 2, position[1] - 1))
-        if position[0] - 2 >= 0 and xiangqi.board[position[0] - 1][position[1]] is None:
-            if position[1] + 1 <= 8:
-                cells.append((position[0] - 2, position[1] + 1))
-            if position[1] - 1 >= 0:
-                cells.append((position[0] - 2, position[1] - 1))
-        if position[1] + 2 <= 8 and xiangqi.board[position[0]][position[1] + 1] is None:
-            if position[0] + 1 <= 9:
-                cells.append((position[0] + 1, position[1] + 2))
-            if position[0] - 1 >= 0:
-                cells.append((position[0] - 1, position[1] + 2))
-        if position[1] - 2 >= 0 and xiangqi.board[position[0]][position[1] - 1] is None:
-            if position[0] + 1 <= 9:
-                cells.append((position[0] + 1, position[1] - 2))
-            if position[0] - 1 >= 0:
-                cells.append((position[0] - 1, position[1] - 2))
-        return cells
+        row, col = position
+        if row + 2 <= 9 and xiangqi.board[row + 1][col] is None:
+            if col + 1 <= 8:
+                cells.append((row + 2, col + 1))
+            if col - 1 >= 0:
+                cells.append((row + 2, col - 1))
+        if row - 2 >= 0 and xiangqi.board[row - 1][col] is None:
+            if col + 1 <= 8:
+                cells.append((row - 2, col + 1))
+            if col - 1 >= 0:
+                cells.append((row - 2, col - 1))
+        if col + 2 <= 8 and xiangqi.board[row][col + 1] is None:
+            if row + 1 <= 9:
+                cells.append((row + 1, col + 2))
+            if row - 1 >= 0:
+                cells.append((row - 1, col + 2))
+        if col - 2 >= 0 and xiangqi.board[row][col - 1] is None:
+            if row + 1 <= 9:
+                cells.append((row + 1, col - 2))
+            if row - 1 >= 0:
+                cells.append((row - 1, col - 2))
+        return [cell for cell in cells if are_constraints_satisfied(cell)]
 
     def to_string():
         return 'H'
@@ -1776,25 +1790,30 @@ class Rook(Piece):
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
         if xiangqi.turn != self.turn:
             return []
+        
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Rook, position, dest)) for constraint in constraints])
 
         cells = []
-        for i in range(position[0] + 1, 10):
-            cells.append((i, position[1]))
-            if xiangqi.board[i][position[1]] is not None:
+        row, col = position
+        for i in range(row + 1, 10):
+            cells.append((i, col))
+            if xiangqi.board[i][col] is not None:
                 break
-        for i in range(position[0] - 1, -1, -1):
-            cells.append((i, position[1]))
-            if xiangqi.board[i][position[1]] is not None:
+        for i in range(row - 1, -1, -1):
+            cells.append((i, col))
+            if xiangqi.board[i][col] is not None:
                 break
-        for j in range(position[1] + 1, 9):
-            cells.append((position[0], j))
-            if xiangqi.board[position[0]][j] is not None:
+        for j in range(col + 1, 9):
+            cells.append((row, j))
+            if xiangqi.board[row][j] is not None:
                 break
-        for j in range(position[1] - 1, -1, -1):
-            cells.append((position[0], j))
-            if xiangqi.board[position[0]][j] is not None:
+        for j in range(col - 1, -1, -1):
+            cells.append((row, j))
+            if xiangqi.board[row][j] is not None:
                 break
-        return cells
+        return [cell for cell in cells if are_constraints_satisfied(cell)]
 
     def to_string():
         return 'R'
@@ -1922,6 +1941,10 @@ class Cannon(Piece):
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
         if xiangqi.turn != self.turn:
             return []
+        
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Cannon, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -1957,7 +1980,7 @@ class Cannon(Piece):
                 if xiangqi.board[row][jj] is not None:
                     break
             break
-        return cells
+        return [cell for cell in cells if are_constraints_satisfied(cell)]
 
     def to_string():
         return 'C'
@@ -2086,6 +2109,10 @@ class Pawn(Piece):
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
         if xiangqi.turn != self.turn:
             return []
+        
+        constraints = xiangqi.get_constraints()
+        def are_constraints_satisfied(dest):
+            return all([constraint.is_check() or constraint.satisfies(Move(Pawn, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -2105,7 +2132,7 @@ class Pawn(Piece):
                     cells.append((row, col - 1))
                 if col < 8:
                     cells.append((row, col + 1))
-        return cells
+        return [cell for cell in cells if are_constraints_satisfied(cell)]
 
     def to_string():
         return 'P'
