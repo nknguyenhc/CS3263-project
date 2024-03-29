@@ -45,7 +45,7 @@ class Xiangqi():
             self.king_positions = self.find_king_positions()
         self.piece_count = None
         self.hash_value = None
-        self.constraints # cached constraints
+        self.constraints = None # cached constraints
 
     def find_king_positions(self):
         king_positions = [None, None]
