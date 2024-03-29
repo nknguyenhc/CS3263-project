@@ -30,6 +30,7 @@ def main():
         print()
         if board.turn == algo_turn:
             move = algo.next_move(board)
+            print(move)
             print(f'Algo choose: {move.to_notation(board)}')
         else:
             move_string = input('Please key in your move: ')
