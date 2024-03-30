@@ -1215,6 +1215,9 @@ class Piece:
         """
         raise NotImplementedError
     
+    def _are_constraints_satisfied(self, origin, dest, constraints):
+        return all([constraint.is_check() or constraint.satisfies(Move(self.__class__, origin, dest)) for constraint in constraints])
+    
     def __hash__(self):
         """Each piece must be hashable.
         """
@@ -1431,21 +1434,21 @@ class Advisor(Piece):
             return []
         
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Advisor, position, dest)) for constraint in constraints])
 
         if self.turn:
             match position:
                 case (9, 3) | (9, 5) | (7, 3) | (7, 5):
-                    return [(8, 4)] if are_constraints_satisfied((8, 4)) else []
+                    cells = [(8, 4)]
                 case (8, 4):
-                    return [dest for dest in [(9, 3), (9, 5), (7, 3), (7, 5)] if are_constraints_satisfied(dest)]
+                    cells = [(9, 3), (9, 5), (7, 3), (7, 5)]
         else:
             match position:
                 case (0, 3) | (0, 5) | (2, 3) | (2, 5):
-                    return [(1, 4)] if are_constraints_satisfied((1, 4)) else []
+                    cells = [(1, 4)]
                 case (1, 4):
-                    return [dest for dest in [(0, 3), (0, 5), (2, 3), (2, 5)] if are_constraints_satisfied(dest)]
+                    cells = [(0, 3), (0, 5), (2, 3), (2, 5)]
+        
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'A'
@@ -1511,8 +1514,6 @@ class Elephant(Piece):
             max_row = 4
 
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Elephant, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -1524,7 +1525,7 @@ class Elephant(Piece):
             cells.append((row - 2, col + 2))
         if row - 2 >= min_row and col - 2 >= 0 and xiangqi.board[row - 1][col - 1] is None:
             cells.append((row - 2, col - 2))
-        return [cell for cell in cells if are_constraints_satisfied(cell)]
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'E'
@@ -1533,26 +1534,27 @@ class Elephant(Piece):
         return 150 if self.turn else -150
 
     def activity(self, xiangqi, position):
-        possible_direction_count = 0
-        possible_move_count = 0
-        row, col = position
-        if row > 0 and col > 0:
-            possible_direction_count += 1
-            if xiangqi.board[row - 1][col - 1] is None:
-                possible_move_count += 1
-        if row > 0 and col < 8:
-            possible_direction_count += 1
-            if xiangqi.board[row - 1][col + 1] is None:
-                possible_move_count += 1
-        if row < 9 and col > 0:
-            possible_direction_count += 1
-            if xiangqi.board[row + 1][col - 1] is None:
-                possible_move_count += 1
-        if row < 9 and col < 8:
-            possible_direction_count += 1
-            if xiangqi.board[row + 1][col + 1] is None:
-                possible_move_count += 1
-        return possible_move_count / possible_direction_count
+        # possible_direction_count = 0
+        # possible_move_count = 0
+        # row, col = position
+        # if row > 0 and col > 0:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row - 1][col - 1] is None:
+        #         possible_move_count += 1
+        # if row > 0 and col < 8:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row - 1][col + 1] is None:
+        #         possible_move_count += 1
+        # if row < 9 and col > 0:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row + 1][col - 1] is None:
+        #         possible_move_count += 1
+        # if row < 9 and col < 8:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row + 1][col + 1] is None:
+        #         possible_move_count += 1
+        # return possible_move_count / possible_direction_count
+        return 1
 
     def bonus(self, xiangqi, position, values):
         return 0
@@ -1603,8 +1605,6 @@ class Horse(Piece):
             return []
         
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Horse, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -1628,7 +1628,7 @@ class Horse(Piece):
                 cells.append((row + 1, col - 2))
             if row - 1 >= 0:
                 cells.append((row - 1, col - 2))
-        return [cell for cell in cells if are_constraints_satisfied(cell)]
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'H'
@@ -1792,8 +1792,6 @@ class Rook(Piece):
             return []
         
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Rook, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -1813,7 +1811,7 @@ class Rook(Piece):
             cells.append((row, j))
             if xiangqi.board[row][j] is not None:
                 break
-        return [cell for cell in cells if are_constraints_satisfied(cell)]
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'R'
@@ -1943,8 +1941,6 @@ class Cannon(Piece):
             return []
         
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Cannon, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -1980,7 +1976,7 @@ class Cannon(Piece):
                 if xiangqi.board[row][jj] is not None:
                     break
             break
-        return [cell for cell in cells if are_constraints_satisfied(cell)]
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'C'
@@ -2111,8 +2107,6 @@ class Pawn(Piece):
             return []
         
         constraints = xiangqi.get_constraints()
-        def are_constraints_satisfied(dest):
-            return all([constraint.is_check() or constraint.satisfies(Move(Pawn, position, dest)) for constraint in constraints])
 
         cells = []
         row, col = position
@@ -2132,7 +2126,7 @@ class Pawn(Piece):
                     cells.append((row, col - 1))
                 if col < 8:
                     cells.append((row, col + 1))
-        return [cell for cell in cells if are_constraints_satisfied(cell)]
+        return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
 
     def to_string():
         return 'P'
@@ -2157,10 +2151,8 @@ class Pawn(Piece):
         and is only counted if Manhanttan distance <= 3
         """
         if self.turn:
-            side_value = values[0]
             king_position = xiangqi.king_positions[1]
         else:
-            side_value = values[1]
             king_position = xiangqi.king_positions[0]
         distance = manhanttan_distance(position, king_position)
         if distance <= 3:
