@@ -68,6 +68,13 @@ class Xiangqi():
                 if piece is not None:
                     piece_count += 1
         return piece_count
+    
+    def reverse_board(self):
+        return Xiangqi(
+            board=self.board,
+            turn=not self.turn,
+            king_positions=self.king_positions,
+            copy=False)
 
     def from_string(board_string):
         """Given a string representation of the board,
@@ -1197,10 +1204,11 @@ class Piece:
         """
         raise NotImplementedError
 
-    def activity(self, xiangqi, position):
+    def activity(self, xiangqi: Xiangqi, position):
         """Returns how much of the board that this piece can control, as a float between 0 and 1.
         0 means it cannot move at all, while 1 means it is not obstructed by any piece.
         xiangqi is the state of the game, and position indicates its position on the board.
+        The given `xiangqi` must have turn == self.turn, to accommodate for constraint calculation.
         """
         raise NotImplementedError
 
@@ -1214,6 +1222,9 @@ class Piece:
         Using total side value is not very accurate, because supporting pieces must be in good position as well, for piece to create threat.
         """
         raise NotImplementedError
+    
+    def _are_constraints_satisfied(self, origin, dest, constraints):
+        return all([constraint.is_check() or constraint.satisfies(Move(self.__class__, origin, dest)) for constraint in constraints])
     
     def __hash__(self):
         """Each piece must be hashable.
@@ -1375,7 +1386,7 @@ class King(Piece):
     def value(self, position, piece_count):
         return 0
 
-    def activity(self, xiangqi, position):
+    def activity(self, xiangqi: Xiangqi, position):
         return 0
 
     def bonus(self, xiangqi, position, values):
@@ -1449,7 +1460,7 @@ class Advisor(Piece):
     def value(self, position, piece_count):
         return 150 if self.turn else -150
 
-    def activity(self, xiangqi, position):
+    def activity(self, xiangqi: Xiangqi, position):
         return 1
 
     def bonus(self, xiangqi, position, values):
@@ -1523,27 +1534,28 @@ class Elephant(Piece):
     def value(self, position, piece_count):
         return 150 if self.turn else -150
 
-    def activity(self, xiangqi, position):
-        possible_direction_count = 0
-        possible_move_count = 0
-        row, col = position
-        if row > 0 and col > 0:
-            possible_direction_count += 1
-            if xiangqi.board[row - 1][col - 1] is None:
-                possible_move_count += 1
-        if row > 0 and col < 8:
-            possible_direction_count += 1
-            if xiangqi.board[row - 1][col + 1] is None:
-                possible_move_count += 1
-        if row < 9 and col > 0:
-            possible_direction_count += 1
-            if xiangqi.board[row + 1][col - 1] is None:
-                possible_move_count += 1
-        if row < 9 and col < 8:
-            possible_direction_count += 1
-            if xiangqi.board[row + 1][col + 1] is None:
-                possible_move_count += 1
-        return possible_move_count / possible_direction_count
+    def activity(self, xiangqi: Xiangqi, position):
+        # possible_direction_count = 0
+        # possible_move_count = 0
+        # row, col = position
+        # if row > 0 and col > 0:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row - 1][col - 1] is None:
+        #         possible_move_count += 1
+        # if row > 0 and col < 8:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row - 1][col + 1] is None:
+        #         possible_move_count += 1
+        # if row < 9 and col > 0:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row + 1][col - 1] is None:
+        #         possible_move_count += 1
+        # if row < 9 and col < 8:
+        #     possible_direction_count += 1
+        #     if xiangqi.board[row + 1][col + 1] is None:
+        #         possible_move_count += 1
+        # return possible_move_count / possible_direction_count
+        return 1
 
     def bonus(self, xiangqi, position, values):
         return 0
@@ -1624,31 +1636,54 @@ class Horse(Piece):
         """
         return (1 if self.turn else -1) * (300 + 60 * (32 - piece_count) / 20)
 
-    def activity(self, xiangqi, position):
+    def activity(self, xiangqi: Xiangqi, position):
         """Horse strength is dependent on whether it is pinned at its 4 sides.
         Return value between 0.7 - 1.
         Use a logarithm function so that horses with higher raw activity score has
         lower difference in actual activity scores.
         """
         possible_direction_count = 0
-        possible_move_count = 0
+        possible_moves = []
         row, col = position
-        if row > 0:
-            possible_direction_count += 2
-            if xiangqi.board[row - 1][col] is None:
-                possible_move_count += 2
-        if row < 9:
-            possible_direction_count += 2
-            if xiangqi.board[row + 1][col] is None:
-                possible_move_count += 2
-        if col > 0:
-            possible_direction_count += 2
-            if xiangqi.board[row][col - 1] is None:
-                possible_move_count += 2
-        if col < 8:
-            possible_direction_count += 2
-            if xiangqi.board[row][col + 1] is None:
-                possible_move_count += 2
+        if row - 1 > 0:
+            if col > 0:
+                possible_direction_count += 1
+                if xiangqi.board[row - 1][col] is None:
+                    possible_moves.append((row - 2, col - 1))
+            if col < 8:
+                possible_direction_count += 1
+                if xiangqi.board[row - 1][col] is None:
+                    possible_moves.append((row - 2, col + 1))
+        if row + 1 < 9:
+            if col > 0:
+                possible_direction_count += 1
+                if xiangqi.board[row + 1][col] is None:
+                    possible_moves.append((row + 2, col - 1))
+            if col < 9:
+                possible_direction_count += 1
+                if xiangqi.board[row + 1][col] is None:
+                    possible_moves.append((row + 2, col + 1))
+        if col - 1 > 0:
+            if row > 0:
+                possible_direction_count += 1
+                if xiangqi.board[row][col - 1] is None:
+                    possible_moves.append((row - 1, col - 2))
+            if row < 9:
+                possible_direction_count += 1
+                if xiangqi.board[row][col - 1] is None:
+                    possible_moves.append((row + 1, col - 2))
+        if col + 1 < 8:
+            if row > 0:
+                possible_direction_count += 1
+                if xiangqi.board[row][col + 1] is None:
+                    possible_moves.append((row - 1, col + 2))
+            if row < 9:
+                possible_direction_count += 1
+                if xiangqi.board[row][col + 1] is None:
+                    possible_moves.append((row + 1, col + 2))
+        
+        constraints = xiangqi.get_constraints()
+        possible_move_count = max(len([cell for cell in possible_moves if self._are_constraints_satisfied(position, cell, constraints)]), 1)
         return math.log(possible_move_count + 2) / math.log(possible_direction_count + 2) * 0.2 + 0.8
 
     def bonus(self, xiangqi, position, values):
@@ -1809,50 +1844,59 @@ class Rook(Piece):
         have closer activity values than rooks controlling less squares.
         Count the values beyond the first piece, because the rook can still influence the space beyond.
         """
-        def inspect_col(col, row_range, action_count):
+        def inspect_cell(row: int, col: int, piece_count: int, is_enemy: bool, direct_moves,
+                         indirect_behind_enemy_moves, indirect_behind_friend_moves) -> tuple[int, bool, bool]:
+            if xiangqi.board[row][col] is None:
+                if piece_count == 0:
+                    direct_moves.append((row, col))
+                elif is_enemy:
+                    indirect_behind_enemy_moves.append((row, col))
+                else:
+                    indirect_behind_friend_moves.append((row, col))
+            elif piece_count == 1:
+                if is_enemy:
+                    indirect_behind_enemy_moves.append((row, col))
+                else:
+                    indirect_behind_friend_moves.append((row, col))
+                return piece_count, is_enemy, True
+            else:
+                direct_moves.append((row, col))
+                piece_count += 1
+                is_enemy = xiangqi.board[row][col].turn != self.turn
+            return piece_count, is_enemy, False
+
+        def inspect_col(col: int, row_range: range, direct_moves,
+                        indirect_behind_enemy_moves, indirect_behind_friend_moves):
             piece_count = 0
             is_enemy = True
             for row in row_range:
-                if xiangqi.board[row][col] is None:
-                    if piece_count == 0:
-                        action_count += 1
-                    elif is_enemy:
-                        action_count += 0.2
-                    else:
-                        action_count += 0.8
-                elif piece_count == 1:
-                    action_count += 1
+                piece_count, is_enemy, is_exit = inspect_cell(row, col, piece_count, is_enemy, direct_moves,
+                                                              indirect_behind_enemy_moves, indirect_behind_friend_moves)
+                if is_exit:
                     break
-                else:
-                    action_count += 1
-                    piece_count += 1
-                    is_enemy = xiangqi.board[row][col].turn != self.turn
-            return action_count
 
-        def inspect_row(row, col_range, action_count):
+        def inspect_row(row: int, col_range: range, direct_moves,
+                        indirect_behind_enemy_moves, indirect_behind_friend_moves):
             piece_count = 0
-            is_enenmy = True
+            is_enemy = True
             for col in col_range:
-                if xiangqi.board[row][col] is None:
-                    if piece_count == 0:
-                        action_count += 1
-                    elif is_enemy:
-                        action_count += 0.2
-                    else:
-                        action_count += 0.8
-                elif piece_count == 1:
-                    action_count += 1
+                piece_count, is_enemy, is_exit = inspect_cell(row, col, piece_count, is_enemy, direct_moves,
+                                                              indirect_behind_enemy_moves, indirect_behind_friend_moves)
+                if is_exit:
                     break
-                else:
-                    action_count += 1
-                    piece_count += 1
-                    is_enemy = xiangqi.board[row][col].turn != self.turn
-            return action_count
 
-        action_count = inspect_col(position[1], range(position[0] + 1, 10), 0)
-        action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
-        action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
-        action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
+        direct_moves, indirect_behind_enemy_moves, indirect_behind_friend_moves = [], [], []
+        inspect_col(position[1], range(position[0] + 1, 10), direct_moves, indirect_behind_enemy_moves, indirect_behind_friend_moves)
+        inspect_col(position[1], range(position[0] - 1, -1, -1), direct_moves, indirect_behind_enemy_moves, indirect_behind_friend_moves)
+        inspect_row(position[0], range(position[1] + 1, 9), direct_moves, indirect_behind_enemy_moves, indirect_behind_friend_moves)
+        inspect_row(position[0], range(position[1] - 1, -1, -1), direct_moves, indirect_behind_enemy_moves, indirect_behind_friend_moves)
+
+        constraints = xiangqi.get_constraints()
+        def obtain_valid_actions(cells):
+            return [cell for cell in cells if self._are_constraints_satisfied(position, cell, constraints)]
+        
+        action_count = max(len(obtain_valid_actions(direct_moves)) + 0.4 * len(obtain_valid_actions(indirect_behind_enemy_moves)) \
+            + 0.8 * len(obtain_valid_actions(indirect_behind_friend_moves)), 1)
         return math.log(action_count) / math.log(17) * 0.5 + 0.5
 
     def bonus(self, xiangqi, position, values):
@@ -1976,36 +2020,41 @@ class Cannon(Piece):
         Use a logarithm function so that cannons controlling more squares have smaller difference in activity
         than cannons controlling less squares.
         """
-        def inspect_row(row, col_range, curr_action_count):
+        def inspect_cell(row: int, col: int, piece_count: int, moves: list[list]) -> tuple[int, bool]:
+            if piece_count == 3:
+                return piece_count, True
+            if xiangqi.board[row][col] is not None:
+                if piece_count >= 1:
+                    moves[piece_count].append((row, col))
+                return piece_count + 1, False
+            moves[piece_count].append((row, col))
+            return piece_count, False
+
+        def inspect_row(row: int, col_range: range, moves: tuple[list, list, list]):
             piece_count = 0
             for col in col_range:
-                if piece_count == 3:
+                piece_count, is_exit = inspect_cell(row, col, piece_count, moves)
+                if is_exit:
                     break
-                if xiangqi.board[row][col] is not None:
-                    piece_count += 1
-                    if piece_count > 1:
-                        curr_action_count += 1
-                    continue
-                curr_action_count += 0.7 if piece_count == 0 else 1
-            return curr_action_count
 
-        def inspect_col(col, row_range, curr_action_count):
+        def inspect_col(col: int, row_range: range, moves: tuple[list, list, list]):
             piece_count = 0
             for row in row_range:
-                if piece_count == 3:
+                piece_count, is_exit = inspect_cell(row, col, piece_count, moves)
+                if is_exit:
                     break
-                if xiangqi.board[row][col] is not None:
-                    piece_count += 1
-                    if piece_count > 1:
-                        curr_action_count += 1
-                    continue
-                curr_action_count += 0.7 if piece_count == 0 else 1
-            return curr_action_count
 
-        action_count = inspect_row(position[0], range(position[1] + 1, 9), 0)
-        action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        action_count = inspect_col(position[1], range(position[0] + 1, 10), action_count)
-        action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
+        moves = ([], [], [])
+        inspect_row(position[0], range(position[1] + 1, 9), moves)
+        inspect_row(position[0], range(position[1] - 1, -1, -1), moves)
+        inspect_col(position[1], range(position[0] + 1, 10), moves)
+        inspect_col(position[1], range(position[0] - 1, -1, -1), moves)
+
+        constraints = xiangqi.get_constraints()
+        moves = list(map(
+            lambda x: len([cell for cell in x if self._are_constraints_satisfied(position, cell, constraints)]),
+            moves))
+        action_count = max(0.7 * moves[0] + moves[1] + moves[2], 1)
         return math.log(action_count) / math.log(15) * 0.5 + 0.5
 
     def bonus(self, xiangqi, position, values):
