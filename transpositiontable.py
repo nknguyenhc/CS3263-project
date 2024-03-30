@@ -4,10 +4,10 @@ from enum import Enum
 from utils.xiangqi import Xiangqi
 
 class BoundType(Enum):
-    BOUND_NONE = 0
-    BOUND_LOWER = 1
-    BOUND_UPPER = 2
-    BOUND_EXACT = BOUND_LOWER | BOUND_UPPER
+    NONE = 0
+    LOWER = 1
+    UPPER = 2
+    EXACT = LOWER | UPPER
 
 class TTEntry:
 
@@ -25,11 +25,14 @@ class TranspositionTable:
         self.maxsize = 1024
 
     def lookup(self, key):
-        # probe for an tt entry in the table
         entry = self.table.get(key, None)
         if entry is not None:
             self.table.move_to_end(key, last=True)
         return entry
+
+    def remove_one_fourth(self):
+        for _ in range(self.maxsize // 4):
+            self.table.popitem(last=False)
 
     def update(self, entry):
         self.table[entry.key] = entry
