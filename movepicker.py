@@ -68,11 +68,7 @@ class MovePicker:
         3: threat by advisor/elephant
         4: threat by pawn
         """
-        reverse_board = Xiangqi(
-            board=xiangqi.board,
-            turn=not xiangqi.turn,
-            king_positions=xiangqi.king_positions,
-            copy=False)
+        reverse_board = xiangqi.reverse_board()
         threats = [[0 for i in range(9)] for j in range(10)]
         supports = [[[0, 0, None] for i in range(9)] for j in range(10)]
 

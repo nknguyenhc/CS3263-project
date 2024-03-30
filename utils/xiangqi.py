@@ -68,6 +68,16 @@ class Xiangqi():
                 if piece is not None:
                     piece_count += 1
         return piece_count
+    
+    def reverse_board(self):
+        """Returns the same board but turn is the opposite.
+        To be used in evaluation & movepicker. Not to be mutated.
+        """
+        return Xiangqi(
+            board=self.board,
+            turn=not self.turn,
+            king_positions=self.king_positions,
+            copy=False)
 
     def from_string(board_string):
         """Given a string representation of the board,
