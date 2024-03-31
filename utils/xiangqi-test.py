@@ -1229,6 +1229,36 @@ def test_cannon_check_constraint():
         Move(Cannon, (7, 4), (3, 4)),
     }
 
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Rook(False), None, None, None, None],
+        [None, None, None, Advisor(True), King(True), Advisor(True), None, None, None],
+    ])
+    assert set(board.actions()) == {
+        Move(King, (9, 4), (8, 4))
+    }
+
+    board = Xiangqi(board=[
+        [None, None, None, King(False), None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Rook(False), None, None, Rook(False), None],
+        [None, None, None, Advisor(True), King(True), Advisor(True), None, None, None],
+    ])
+    assert set(board.actions()) == set()
+
 def test_horse_check_constraint():
     board = Xiangqi(board=[
         [None, None, None, None, King(False), None, None, None, None],
