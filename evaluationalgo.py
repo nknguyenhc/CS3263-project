@@ -18,11 +18,14 @@ class EvaluationAlgo(BaseAlgo):
         if depth == 0:
             return (1 if xiangqi.turn else -1) * self.evaluator.evaluate(xiangqi), None
         
-        value = -EvaluationAlgo.INF - 1
+        value = -EvaluationAlgo.INF
         best_move = None
         for move in self.movepicker.move_order(xiangqi, MoveMode.ALL):
             new_value, _ = self.negamax(xiangqi.move(move), depth - 1, -beta, -alpha)
             new_value = -new_value
+            if best_move is None:
+                best_move = move
+                value = new_value
             if new_value > value:
                 value = new_value
                 best_move = move

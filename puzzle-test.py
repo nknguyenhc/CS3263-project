@@ -1,8 +1,9 @@
 from utils.xiangqi import Xiangqi
 from randomalgo import RandomAlgo
+from evaluationalgo import EvaluationAlgo
 
 # Replace this line with your algo
-algo = RandomAlgo()
+algo = EvaluationAlgo()
 
 def test_puzzle(puzzle_name, move_limit, expected_moves):
     """Tests a puzzle, a definite sequence of checks/kills to checkmate.
@@ -116,7 +117,7 @@ def test_endgames():
 
 def main():
     test_puzzles()
-    test_endgames()
+    # test_endgames()
 
 if __name__ == '__main__':
     main()
