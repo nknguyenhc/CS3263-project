@@ -11,14 +11,14 @@ class EvaluationAlgo(BaseAlgo):
         self.movepicker = MovePicker()
     
     def next_move(self, xiangqi: Xiangqi) -> Move | None:
-        _, move = self.negamax(xiangqi, 2, -EvaluationAlgo.INF, EvaluationAlgo.INF)
+        _, move = self.negamax(xiangqi, 4, -EvaluationAlgo.INF, EvaluationAlgo.INF)
         return move
     
     def negamax(self, xiangqi: Xiangqi, depth: int, alpha: float, beta: float):
         if depth == 0:
             return (1 if xiangqi.turn else -1) * self.evaluator.evaluate(xiangqi), None
         
-        value = -EvaluationAlgo.INF
+        value = -EvaluationAlgo.INF - 1
         best_move = None
         for move in self.movepicker.move_order(xiangqi, MoveMode.ALL):
             new_value, _ = self.negamax(xiangqi.move(move), depth - 1, -beta, -alpha)
@@ -28,5 +28,6 @@ class EvaluationAlgo(BaseAlgo):
                 best_move = move
             if value >= beta:
                 break
+            alpha = max(alpha, value)
 
         return value, best_move

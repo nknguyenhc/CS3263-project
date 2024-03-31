@@ -27,6 +27,7 @@ def main():
     test_board("R14-sacrifice-rook", 700)
     test_board("pinned-wocaoma", 0)
     test_board("empty-cannon-vs-pinned-wocaoma", -400)
+    test_board("C8+7", -100)
 
 if __name__ == '__main__':
     main()
