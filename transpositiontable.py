@@ -20,9 +20,9 @@ class TTEntry:
 
 class TranspositionTable:
 
-    def __init__(self, maxsize=1024):
+    def __init__(self, maxsize=32768):
         self.table = OrderedDict()
-        self.maxsize = 1024
+        self.maxsize = maxsize
 
     def lookup(self, key):
         entry = self.table.get(key, None)
