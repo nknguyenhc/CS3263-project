@@ -52,7 +52,7 @@ class PVAlgo(BaseAlgo):
         info = self.info
 
         if depth == 0:
-            return self.evaluation.evaluate(xiangqi)
+            return (1 if xiangqi.turn else -1) * self.evaluation.evaluate(xiangqi)
 
         tt_entry: TTEntry = self.transposition_table_q.lookup(xiangqi)
         if tt_entry:
@@ -69,7 +69,7 @@ class PVAlgo(BaseAlgo):
         else:
             tt_move = None
 
-        score = self.evaluation.evaluate(xiangqi)
+        score = (1 if xiangqi.turn else -1) * self.evaluation.evaluate(xiangqi)
         if score >= beta:
             # score is out of bound, we create a new entry in the transposition table
             # signal that the actual valuation of this node is bigger than beta but
@@ -153,7 +153,7 @@ class PVAlgo(BaseAlgo):
         if tt_bound == BoundType.EXACT:
             static_eval = tt_score
         else:
-            static_eval = self.evaluation.evaluate(xiangqi)
+            static_eval = (1 if xiangqi.turn else -1) * self.evaluation.evaluate(xiangqi)
 
         if (tt_score is not None
             and (
