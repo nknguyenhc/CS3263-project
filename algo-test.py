@@ -8,7 +8,7 @@ import sys
 # algo playing as red
 algo1: BaseAlgo = EvaluationAlgo()
 # algo playing as black
-algo2: BaseAlgo = EvaluationAlgo()
+algo2: BaseAlgo = MovepickAlgo()
 
 def main():
     if len(sys.argv) > 1:
@@ -37,7 +37,7 @@ def main():
     elif board.turn:
         print("Black wins!")
     else:
-        print("Red winds!")
+        print("Red wins!")
 
 
 if __name__ == '__main__':
