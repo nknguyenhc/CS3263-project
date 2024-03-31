@@ -980,7 +980,7 @@ class CannonCheckConstraint(CheckConstraint):
     def satisfies(self, move):
         if self.king_position[0] == self.cannon_position[0]:
             if move.from_coords == self.king_position:
-                return move.to_coords[0] != self.king_position[0]
+                return move.to_coords[0] != self.king_position[0] or move.to_coords[1] == self.piece_position[1]
             if move.from_coords == self.piece_position:
                 if move.to_coords[0] != self.king_position[0]:
                     return True
@@ -996,7 +996,7 @@ class CannonCheckConstraint(CheckConstraint):
                 or (self.king_position[1] > move.to_coords[1] and move.to_coords[1] >= self.cannon_position[1])
         else:
             if move.from_coords == self.king_position:
-                return move.to_coords[1] != self.king_position[1]
+                return move.to_coords[1] != self.king_position[1] or move.to_coords[0] == self.piece_position[0]
             if move.from_coords == self.piece_position:
                 if move.to_coords[1] != self.king_position[1]:
                     return True
