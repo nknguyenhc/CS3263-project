@@ -1850,44 +1850,37 @@ class Rook(Piece):
         have closer activity values than rooks controlling less squares.
         Count the values beyond the first piece, because the rook can still influence the space beyond.
         """
+        def inspect_cell(row: int, col: int, action_count: int, piece_count: int, coefficient: float) -> tuple[int, int, float]:
+            piece = xiangqi.board[row][col]
+            if piece is None:
+                return action_count + coefficient, piece_count, coefficient
+            elif piece_count == 1:
+                return action_count + coefficient, piece_count + 1, coefficient
+            else:
+                if piece.turn != self.turn:
+                    coefficient = 0.8
+                elif isinstance(piece, Cannon) or isinstance(piece, Rook):
+                    coefficient = 0.9
+                else:
+                    coefficient = 0.6
+                return action_count + coefficient, piece_count + 1, coefficient
+
         def inspect_col(col, row_range, action_count):
             piece_count = 0
-            is_enemy = True
+            coefficient = 1
             for row in row_range:
-                if xiangqi.board[row][col] is None:
-                    if piece_count == 0:
-                        action_count += 1
-                    elif is_enemy:
-                        action_count += 0.2
-                    else:
-                        action_count += 0.8
-                elif piece_count == 1:
-                    action_count += 1
+                action_count, piece_count, coefficient = inspect_cell(row, col, action_count, piece_count, coefficient)
+                if piece_count == 2:
                     break
-                else:
-                    action_count += 1
-                    piece_count += 1
-                    is_enemy = xiangqi.board[row][col].turn != self.turn
             return action_count
 
         def inspect_row(row, col_range, action_count):
             piece_count = 0
-            is_enenmy = True
+            coefficient = 1
             for col in col_range:
-                if xiangqi.board[row][col] is None:
-                    if piece_count == 0:
-                        action_count += 1
-                    elif is_enemy:
-                        action_count += 0.2
-                    else:
-                        action_count += 0.8
-                elif piece_count == 1:
-                    action_count += 1
+                action_count, piece_count, coefficient = inspect_cell(row, col, action_count, piece_count, coefficient)
+                if piece_count == 2:
                     break
-                else:
-                    action_count += 1
-                    piece_count += 1
-                    is_enemy = xiangqi.board[row][col].turn != self.turn
             return action_count
 
         action_count = inspect_col(position[1], range(position[0] + 1, 10), 0)
