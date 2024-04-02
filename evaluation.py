@@ -12,7 +12,6 @@ class Evaluation:
             for col, piece in enumerate(arr):
                 if piece is None:
                     continue
-                # print(piece, piece.value((row, col)), piece.activity(xiangqi, (row, col)))
                 piece_value = piece.value((row, col), piece_count) * piece.activity(xiangqi, (row, col))
                 if piece_value > 0:
                     red_value += piece_value
@@ -26,8 +25,12 @@ class Evaluation:
             for col, piece in enumerate(arr):
                 if piece is None:
                     continue
-                # print(piece, piece.bonus(xiangqi, (row, col), values))
-                bonus += piece.bonus(xiangqi, (row, col), values)
+                if piece.turn == xiangqi.turn:
+                    # print(piece, (row, col), piece.bonus(xiangqi, (row, col), values))
+                    bonus += piece.bonus(xiangqi, (row, col), values)
+                else:
+                    # print(piece, (row, col), piece.bonus(xiangqi.reverse_board(), (row, col), values))
+                    bonus += piece.bonus(xiangqi.reverse_board(), (row, col), values)
         
         # add value to the side taking the turn
         turn_value = 50 if xiangqi.turn else -50

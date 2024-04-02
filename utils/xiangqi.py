@@ -1228,7 +1228,7 @@ class Piece:
         """
         raise NotImplementedError
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         """Returns the bonus for this piece in this position.
         These bonuses are due to their threat on the opponent king.
         values is a tuple of 2 elements, which are the total values (with activity)
@@ -1405,7 +1405,7 @@ class King(Piece):
     def activity(self, xiangqi, position):
         return 0
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         return 0
     
     def __hash__(self):
@@ -1483,7 +1483,7 @@ class Advisor(Piece):
     def activity(self, xiangqi, position):
         return 1
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         return 0
     
     def __hash__(self):
@@ -1580,7 +1580,7 @@ class Elephant(Piece):
         # return possible_move_count / possible_direction_count
         return 1
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         return 0
     
     def __hash__(self):
@@ -1668,28 +1668,35 @@ class Horse(Piece):
         Use a logarithm function so that horses with higher raw activity score has
         lower difference in actual activity scores.
         """
-        possible_direction_count = 0
         possible_move_count = 0
         row, col = position
-        if row > 0:
-            possible_direction_count += 2
+        if row - 1> 0:
             if xiangqi.board[row - 1][col] is None:
-                possible_move_count += 2
-        if row < 9:
-            possible_direction_count += 2
+                if col > 0:
+                    possible_move_count += 1
+                if col < 8:
+                    possible_move_count += 1
+        if row + 1 < 9:
             if xiangqi.board[row + 1][col] is None:
-                possible_move_count += 2
-        if col > 0:
-            possible_direction_count += 2
+                if col > 0:
+                    possible_move_count += 1
+                if col < 8:
+                    possible_move_count += 1
+        if col - 1 > 0:
             if xiangqi.board[row][col - 1] is None:
-                possible_move_count += 2
-        if col < 8:
-            possible_direction_count += 2
+                if row > 0:
+                    possible_move_count += 1
+                if row < 9:
+                    possible_move_count += 1
+        if col + 1 < 8:
             if xiangqi.board[row][col + 1] is None:
-                possible_move_count += 2
-        return math.log(possible_move_count + 2) / math.log(possible_direction_count + 2) * 0.2 + 0.8
+                if row > 0:
+                    possible_move_count += 1
+                if row < 9:
+                    possible_move_count += 1
+        return math.log(possible_move_count + 2) / math.log(10) * 0.4 + 0.6
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         """The bonus of the horse is if it threatens the king.
         For bonus is count, the necessary condition is that the horse threatens a position in the palace.
         If it is pinned, bonus is only counted if it targets the king directly (through the pinned direction)
@@ -1857,13 +1864,14 @@ class Rook(Piece):
             elif piece_count == 1:
                 return action_count + coefficient, piece_count + 1, coefficient
             else:
+                new_action_count = action_count + coefficient
                 if piece.turn != self.turn:
-                    coefficient = 0.8
+                    coefficient = 0.2
                 elif isinstance(piece, Cannon) or isinstance(piece, Rook):
-                    coefficient = 0.9
+                    coefficient = 1
                 else:
-                    coefficient = 0.6
-                return action_count + coefficient, piece_count + 1, coefficient
+                    coefficient = 0.8
+                return new_action_count, piece_count + 1, coefficient
 
         def inspect_col(col, row_range, action_count):
             piece_count = 0
@@ -1887,10 +1895,50 @@ class Rook(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        return math.log(action_count) / math.log(17) * 0.5 + 0.5
+        return math.log(min(action_count, 9)) / math.log(9) * 0.5 + 0.5
 
-    def bonus(self, xiangqi, position, values):
-        return 0
+    def bonus(self, xiangqi: Xiangqi, position, values):
+        """Bonus if the rook pins two enemy pieces ahead, both of which are horses and cannons.
+        """
+        base_value_each = 100
+        def is_piece_cannon_or_horse(piece):
+            return isinstance(piece, Horse) or isinstance(piece, Cannon)
+        
+        def inspect_col(col, row_range):
+            enemy_found = False
+            for row in row_range:
+                piece = xiangqi.board[row][col]
+                if piece is None:
+                    continue
+                if piece.turn == self.turn or not is_piece_cannon_or_horse(piece):
+                    return 0
+                if enemy_found:
+                    return base_value_each
+                else:
+                    enemy_found = True
+            return 0
+        
+        def inspect_row(row, col_range):
+            enemy_found = False
+            for col in col_range:
+                piece = xiangqi.board[row][col]
+                if piece is None:
+                    continue
+                if piece.turn == self.turn or not is_piece_cannon_or_horse(piece):
+                    return 0
+                if enemy_found:
+                    return base_value_each
+                else:
+                    enemy_found = True
+            return 0
+        
+        value = 0
+        row, col = position
+        value += inspect_row(row, range(col + 1, 9))
+        value += inspect_row(row, range(col - 1, -1 , -1))
+        value += inspect_col(col, range(row + 1, 10))
+        value += inspect_col(col, range(row - 1, -1, -1))
+        return value
     
     def __hash__(self):
         return 16
@@ -2044,7 +2092,7 @@ class Cannon(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         return math.log(action_count) / math.log(15) * 0.5 + 0.5
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus is added for empty cannons, i.e. cannon facing king directly without any piece in between.
         """
         if self.turn:
@@ -2062,7 +2110,15 @@ class Cannon(Piece):
                     continue
                 if col != king_position[1]:
                     return 0
-                return 900
+                
+                king = xiangqi.board[row][col]
+                reverse_board = xiangqi.reverse_board()
+                king_actions = king.actions(reverse_board, (row, col))
+                if Move(King, (row, col), (row + 1, col)) in king_actions \
+                        or Move(King, (row, col), (row - 1, col)) in king_actions:
+                    return 0
+                else:
+                    return 350
             assert False
 
         def inspect_col(row, col, base_value):
@@ -2073,7 +2129,15 @@ class Cannon(Piece):
                     continue
                 if row != king_position[0]:
                     return 0
-                return 900
+                
+                king = xiangqi.board[row][col]
+                reverse_board = xiangqi.reverse_board()
+                king_actions = king.actions(reverse_board, (row, col))
+                if Move(King, (row, col), (row, col - 1)) in king_actions \
+                        or Move(King, (row, col), (row, col + 1)) in king_actions:
+                    return 0
+                else:
+                    return 750
             assert False
 
         row, col = position
@@ -2163,7 +2227,7 @@ class Pawn(Piece):
     def activity(self, xiangqi, position):
         return 1
 
-    def bonus(self, xiangqi, position, values):
+    def bonus(self, xiangqi: Xiangqi, position, values):
         """Pawn bonus is calculated based on Manhattan distance between pawn and king,
         and is only counted if Manhanttan distance <= 3
         """

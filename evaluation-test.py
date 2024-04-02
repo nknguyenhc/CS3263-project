@@ -28,6 +28,8 @@ def main():
     test_board("pinned-wocaoma", 0)
     test_board("empty-cannon-vs-pinned-wocaoma", -400)
     test_board("C8+7", -100)
+    test_board("R12", 50)
+    test_board("R1+1", 100)
 
 if __name__ == '__main__':
     main()

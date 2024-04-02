@@ -2,13 +2,14 @@ from utils.xiangqi import Xiangqi
 from utils.basealgo import BaseAlgo
 from movepickalgo import MovepickAlgo
 from evaluationalgo import EvaluationAlgo
+from PValgo import PVAlgo
 from main import read_board
 import sys
 
 # algo playing as red
-algo1: BaseAlgo = EvaluationAlgo()
+algo1: BaseAlgo = PVAlgo()
 # algo playing as black
-algo2: BaseAlgo = MovepickAlgo()
+algo2: BaseAlgo = PVAlgo()
 
 def main():
     if len(sys.argv) > 1:
