@@ -112,7 +112,7 @@ class PVAlgo(BaseAlgo):
         generated_moves = self.movepicker.move_order(xiangqi, mode=MoveMode.CAPTURE | MoveMode.CHECK)
         prioritize_tt_move(generated_moves, tt_move)
         for move in generated_moves:
-            next_xiangqi = xiangqi.move(move, in_place=False)
+            next_xiangqi = xiangqi.move(move)
             info.ply += 1
             score = -self.quiescence(next_xiangqi, -beta, -alpha, next_depth)
             info.ply -= 1
@@ -211,7 +211,7 @@ class PVAlgo(BaseAlgo):
             info.ply += 1
             is_capture = move.is_capture(xiangqi)
             is_check = move.is_check(xiangqi)
-            next_xiangqi = xiangqi.move(move, in_place=False)
+            next_xiangqi = xiangqi.move(move)
             next_depth = depth - 1
 
             # late move reduction

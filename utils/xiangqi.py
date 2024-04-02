@@ -46,6 +46,7 @@ class Xiangqi():
         self.piece_count = None
         self.hash_value = None
         self.constraints = None # cached constraints
+        self.next_boards = dict() # cached next boards
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -141,6 +142,10 @@ class Xiangqi():
                             break
                     if constraints_satisfied:
                         actions.append(action)
+        # Generate the next states as well.
+        # We know for sure that once actions are obtained, their subsequent states will also be obtained.
+        for move in actions:
+            self.next_boards[move] = self._move(move)
         return actions
 
     def get_constraints(self):
@@ -275,11 +280,11 @@ class Xiangqi():
             return True
         return piece.turn != self.turn
 
-    def move(self, action, in_place=False) -> "Xiangqi":
+    def _move(self, action: "Move") -> "Xiangqi":
         """Returns a new board from application of given action on this board.
         Assuming that the action is a valid action.
         """
-        next_state = self if in_place else Xiangqi(board=self.board, turn=not self.turn,
+        next_state = Xiangqi(board=self.board, turn=not self.turn,
             king_positions=self.king_positions)
         next_state.board[action.to_coords[0]][action.to_coords[1]] = next_state.board[
             action.from_coords[0]][action.from_coords[1]]
@@ -294,6 +299,16 @@ class Xiangqi():
         # print(f"{self.king_positions=}")
         # print(f"{next_state.king_positions=}")
         return next_state
+    
+    def move(self, action: "Move") -> "Xiangqi":
+        """Returns the next board from application of given action on this board.
+        Read from cached value.
+        """
+        if action in self.next_boards:
+            return self.next_boards[action]
+        next_board = self._move(action)
+        self.next_boards[action] = next_board
+        return next_board
 
     def parse_move(self, move_string):
         """Parses a move string into a legitimate.
