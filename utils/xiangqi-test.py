@@ -1451,6 +1451,98 @@ def test_comparison():
     assert board1 == board2
     assert hash(board1) == hash(board2)
 
+def test_rook_row_reachable_move_count():
+    board = Xiangqi(board=[
+        [None, Cannon(True), None, None, King(False), None, None, None, None],
+        [None, None, None, None, Advisor(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, Rook(True), None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    piece = board.board[3][2]
+    assert piece.row_reachable_move_count(board, (3, 2), 0, 1, 4) == 1
+
+    board = Xiangqi(board=[
+        [None, Cannon(True), None, None, King(False), None, None, None, None],
+        [None, None, None, None, Advisor(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Rook(True), None, Pawn(False), None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    piece = board.board[3][0]
+    assert piece.row_reachable_move_count(board, (3, 0), 0, 1, 4) == 2
+
+    board = Xiangqi(board=[
+        [None, None, Cannon(True), None, King(False), None, None, None, None],
+        [None, None, None, None, Advisor(False), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [Rook(True), None, Pawn(False), None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ])
+    piece = board.board[3][0]
+    assert piece.row_reachable_move_count(board, (3, 0), 0, 2, 4) == 0
+
+def test_rook_col_reachable_move_count():
+    board = Xiangqi(board=[
+        [None, None, None, Advisor(False), King(False), Advisor(False), None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(True), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, Rook(True), None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+    ])
+    piece = board.board[7][7]
+    assert piece.col_reachable_move_count(board, (6, 7), 4, 0, 5) == 2
+
+    board = Xiangqi(board=[
+        [None, None, None, Advisor(False), King(False), Advisor(False), None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, Rook(True), None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(True), None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+    ])
+    piece = board.board[3][7]
+    assert piece.col_reachable_move_count(board, (3, 7), 4, 0, 5) == 1
+
+    board = Xiangqi(board=[
+        [None, None, None, Advisor(False), King(False), Advisor(False), None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, Cannon(True), None, Pawn(False), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, Rook(True), None, None],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, King(True), None, None, None, None],
+    ])
+    piece = board.board[7][6]
+    assert piece.col_reachable_move_count(board, (6, 6), 4, 0, 5) == 0
+
 def main():
     test_king_move()
     test_advisor_move()
@@ -1472,6 +1564,9 @@ def main():
     test_pawn_check_constraint()
 
     test_comparison()
+
+    test_rook_row_reachable_move_count()
+    test_rook_col_reachable_move_count()
 
 if __name__ == '__main__':
     main()

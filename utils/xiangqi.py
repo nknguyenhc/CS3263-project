@@ -1201,7 +1201,7 @@ class Piece:
         """
         self.turn = turn
 
-    def actions(self, xiangqi, position):
+    def actions(self, xiangqi, position) -> list[Move]:
         """Returns the list of actions possible for this piece,
         given the state and its current position on the board.
         Assuming that the position given is a valid board position of this piece.
@@ -1263,6 +1263,21 @@ class Piece:
     def _are_constraints_satisfied(self, origin, dest, constraints):
         return all([constraint.is_check() or constraint.satisfies(Move(self.__class__, origin, dest)) for constraint in constraints])
     
+    def row_reachable_move_count(self, xiangqi: Xiangqi, position, row: int, col_min: int, col_max: int):
+        """Determines the number of steps required to reach the row.
+        Exclusive of `col_min` and `col_max`.
+        If more than 2 moves, returns 0.
+        To be used only in calculating bonus for empty cannon.
+        """
+        raise NotImplementedError
+
+    def col_reachable_move_count(self, xiangqi: Xiangqi, position, col: int, row_min: int, row_max: int):
+        """Determines the number of steps required to reach the column.
+        Exclusive of `row_min` and `row_max`.
+        If more than 2 moves, return 0.
+        To be used only in calculating bonus for empty cannon.
+        """
+    
     def __hash__(self):
         """Each piece must be hashable.
         """
@@ -1275,6 +1290,19 @@ class Piece:
 
 
 class King(Piece):
+    safety_malus = (
+        (0, 0, 0, 20, 0, 20, 0, 0, 0),
+        (0, 0, 0, 150, 300, 100, 0, 0, 0),
+        (0, 0, 0, 400, 400, 400, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, -400, -400, -400, 0, 0, 0),
+        (0, 0, 0, -150, -300, -150, 0, 0, 0),
+        (0, 0, 0, -20, 0, -20, 0, 0, 0),
+    )
+
     def __init__(self, turn):
         super().__init__(turn)
 
@@ -1427,7 +1455,11 @@ class King(Piece):
         return 0
 
     def bonus(self, xiangqi: Xiangqi, position, values):
-        return 0
+        if self.turn:
+            side_value = values[0]
+        else:
+            side_value = values[1]
+        return King.safety_malus[position[0]][position[1]] * min(abs(side_value) / 2000, 1)
     
     def __hash__(self):
         return 1
@@ -1618,7 +1650,7 @@ class Horse(Piece):
     def __init__(self, turn):
         super().__init__(turn)
 
-    def actions(self, xiangqi, position):
+    def actions(self, xiangqi, position) -> list[Move]:
         if xiangqi.turn != self.turn:
             return []
 
@@ -1790,6 +1822,28 @@ class Horse(Piece):
         bonus_value = max_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
     
+    def row_reachable_move_count(self, xiangqi: Xiangqi, position, row: int, col_min: int, col_max: int):
+        def is_reached(coor):
+            return coor[0] == row and col_min < coor[1] < col_max
+        return self._reachable_move_count(xiangqi, position, is_reached)
+    
+    def col_reachable_move_count(self, xiangqi: Xiangqi, position, col: int, row_min: int, row_max: int):
+        def is_reached(coor):
+            return coor[1] == col and row_min <= coor[0] <= row_max
+        return self._reachable_move_count(xiangqi, position, is_reached)
+    
+    def _reachable_move_count(self, xiangqi: Xiangqi, position, is_reached: callable):
+        for move in self.actions(xiangqi, position):
+            dest_coor = move.to_coords
+            if is_reached(dest_coor):
+                return 1
+            next_reverse_board = xiangqi.move(move).reverse_board()
+            for next_move in self.actions(next_reverse_board, dest_coor):
+                final_coor = next_move.to_coords
+                if is_reached(final_coor):
+                    return 2
+        return 0
+    
     def __hash__(self):
         return 8
     
@@ -1804,39 +1858,41 @@ class Rook(Piece):
     def __init__(self, turn):
         super().__init__(turn)
 
-    def actions(self, xiangqi, position):
+    def actions(self, xiangqi, position, vertical=True, horizontal=True) -> list[Move]:
         if xiangqi.turn != self.turn:
             return []
 
         actions = []
-        for i in range(position[0] + 1, 10):
-            if xiangqi.board[i][position[1]] is None:
-                actions.append(Move(Rook, position, (i, position[1])))
-                continue
-            if xiangqi.board[i][position[1]].turn != self.turn:
-                actions.append(Move(Rook, position, (i, position[1])))
-            break
-        for i in range(position[0] - 1, -1, -1):
-            if xiangqi.board[i][position[1]] is None:
-                actions.append(Move(Rook, position, (i, position[1])))
-                continue
-            if xiangqi.board[i][position[1]].turn != self.turn:
-                actions.append(Move(Rook, position, (i, position[1])))
-            break
-        for j in range(position[1] + 1, 9):
-            if xiangqi.board[position[0]][j] is None:
-                actions.append(Move(Rook, position, (position[0], j)))
-                continue
-            if xiangqi.board[position[0]][j].turn != self.turn:
-                actions.append(Move(Rook, position, (position[0], j)))
-            break
-        for j in range(position[1] - 1, -1, -1):
-            if xiangqi.board[position[0]][j] is None:
-                actions.append(Move(Rook, position, (position[0], j)))
-                continue
-            if xiangqi.board[position[0]][j].turn != self.turn:
-                actions.append(Move(Rook, position, (position[0], j)))
-            break
+        if vertical:
+            for i in range(position[0] + 1, 10):
+                if xiangqi.board[i][position[1]] is None:
+                    actions.append(Move(Rook, position, (i, position[1])))
+                    continue
+                if xiangqi.board[i][position[1]].turn != self.turn:
+                    actions.append(Move(Rook, position, (i, position[1])))
+                break
+            for i in range(position[0] - 1, -1, -1):
+                if xiangqi.board[i][position[1]] is None:
+                    actions.append(Move(Rook, position, (i, position[1])))
+                    continue
+                if xiangqi.board[i][position[1]].turn != self.turn:
+                    actions.append(Move(Rook, position, (i, position[1])))
+                break
+        if horizontal:
+            for j in range(position[1] + 1, 9):
+                if xiangqi.board[position[0]][j] is None:
+                    actions.append(Move(Rook, position, (position[0], j)))
+                    continue
+                if xiangqi.board[position[0]][j].turn != self.turn:
+                    actions.append(Move(Rook, position, (position[0], j)))
+                break
+            for j in range(position[1] - 1, -1, -1):
+                if xiangqi.board[position[0]][j] is None:
+                    actions.append(Move(Rook, position, (position[0], j)))
+                    continue
+                if xiangqi.board[position[0]][j].turn != self.turn:
+                    actions.append(Move(Rook, position, (position[0], j)))
+                break
         return actions
     
     def get_reachable_cells(self, xiangqi: Xiangqi, position):
@@ -1961,6 +2017,40 @@ class Rook(Piece):
         value += inspect_col(col, range(row - 1, -1, -1))
         return value
     
+    def row_reachable_move_count(self, xiangqi: Xiangqi, position, row: int, col_min: int, col_max: int):
+        def is_reachable_in_one(position) -> bool:
+            if not col_min < position[1] < col_max:
+                return False
+            test_range = range(position[0] + 1, row) if row > position[0] else range(position[0] - 1, row, -1)
+            for test_row in test_range:
+                if xiangqi.board[test_row][position[1]] is not None:
+                    return False
+            return True
+        return self._reachable_move_count(xiangqi, position, is_reachable_in_one,
+                                          self.actions(xiangqi, position, vertical=False, horizontal=True))
+
+    def col_reachable_move_count(self, xiangqi: Xiangqi, position, col: int, row_min: int, row_max: int):
+        def is_reachable_in_one(position) -> bool:
+            if not row_min < position[0] < row_max:
+                return False
+            test_range = range(position[1] + 1, col) if col > position[0] else range(position[1] - 1, col, -1)
+            for test_col in test_range:
+                if xiangqi.board[position[0]][test_col] is not None:
+                    return False
+            return True
+        return self._reachable_move_count(xiangqi, position, is_reachable_in_one,
+                                          self.actions(xiangqi, position, vertical=True, horizontal=False))
+    
+    def _reachable_move_count(self, xiangqi: Xiangqi, position, is_reachable_in_one: callable, actions: list[Move]):
+        if is_reachable_in_one(position):
+            return 1
+        
+        for move in actions:
+            dest_coor = move.to_coords
+            if is_reachable_in_one(dest_coor):
+                return 2
+        return 0
+    
     def __hash__(self):
         return 16
     
@@ -1975,7 +2065,7 @@ class Cannon(Piece):
     def __init__(self, turn):
         super().__init__(turn)
 
-    def actions(self, xiangqi, position):
+    def actions(self, xiangqi, position) -> list[Move]:
         if xiangqi.turn != self.turn:
             return []
 
@@ -2166,6 +2256,38 @@ class Cannon(Piece):
         base_value = inspect_col(row, col, base_value)
         bonus_value = base_value * min(abs(side_value) / 2000, 1)
         return bonus_value if self.turn else -bonus_value
+    
+    def row_reachable_move_count(self, xiangqi: Xiangqi, position, row: int, col_min: int, col_max: int):
+        def is_reachable_in_one(coor) -> bool:
+            if not col_min < coor[1] < col_max:
+                return False
+            test_range = range(coor[0] + 1, row) if row > coor else range(coor[0] - 1, row, -1)
+            for test_row in test_range:
+                if xiangqi.board[test_row][coor[1]] is not None:
+                    return False
+            return True
+        return self._reachable_move_count(xiangqi, position, is_reachable_in_one)
+    
+    def col_reachable_move_count(self, xiangqi: Xiangqi, position, col: int, row_min: int, row_max: int):
+        def is_reachable_in_one(coor) -> bool:
+            if not row_min < coor[0] < row_max:
+                return False
+            test_range = range(coor[1] + 1, col) if col > coor[1] else range(coor[1] - 1, col, -1)
+            for test_col in test_range:
+                if xiangqi.board[coor[0]][test_col] is not None:
+                    return False
+            return True
+        return self._reachable_move_count(xiangqi, position, is_reachable_in_one)
+        
+    def _reachable_move_count(self, xiangqi: Xiangqi, position, is_reachable_in_one: callable):
+        if is_reachable_in_one(position):
+            return 1
+        
+        for move in self.actions(xiangqi, position):
+            dest_coor = move.to_coords
+            if is_reachable_in_one(dest_coor):
+                return 2
+        return 0
     
     def __hash__(self):
         return 32

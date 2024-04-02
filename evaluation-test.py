@@ -30,6 +30,10 @@ def main():
     test_board("C8+7", -100)
     test_board("R12", 50)
     test_board("R1+1", 100)
+    test_board("K5+1", 100)
+    test_board("empty-cannon-bottom-choice-king", 130)
+    test_board("empty-cannon-bottom-choice-advisor", -100)
+    test_board("accidental-empty-cannon", -270)
 
 if __name__ == '__main__':
     main()
