@@ -1092,6 +1092,12 @@ class Move:
         self.mode = check_mode | capture_mode | quiet_mode
         return self.mode
     
+    def is_check(self, xiangqi: Xiangqi) -> bool:
+        return not not (self.get_mode(xiangqi) & MoveMode.CHECK)
+    
+    def is_capture(self, xiangqi: Xiangqi) -> bool:
+        return not not (self.get_mode(xiangqi) & MoveMode.CAPTURE)
+    
     def _is_check(self, xiangqi: Xiangqi) -> bool:
         next_board = xiangqi.move(self)
         constraints = next_board.get_constraints()

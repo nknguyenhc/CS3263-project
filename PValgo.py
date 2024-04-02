@@ -152,7 +152,7 @@ class PVAlgo(BaseAlgo):
         tt_bound = tt_entry and tt_entry.bound
         tt_depth = tt_entry and tt_entry.depth
         tt_move = tt_entry and tt_entry.move
-        tt_capture = tt_move and tt_move._is_capture(xiangqi)
+        tt_capture = tt_move and tt_move.is_capture(xiangqi)
 
         # at non-PV nodes we check for an early TT cutoff
         if (not pv_node
@@ -209,8 +209,8 @@ class PVAlgo(BaseAlgo):
         for move in moves:
             move_count += 1
             info.ply += 1
-            is_capture = move._is_capture(xiangqi)
-            is_check = move._is_check(xiangqi)
+            is_capture = move.is_capture(xiangqi)
+            is_check = move.is_check(xiangqi)
             next_xiangqi = xiangqi.move(move, in_place=False)
             next_depth = depth - 1
 
