@@ -1575,6 +1575,19 @@ class Advisor(Piece):
 
 
 class Elephant(Piece):
+    position_malus = (
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (10, 0, 0, 0, 0, 0, 0, 0, 10),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 60, 0, 0, 0, 60, 0, 0),
+        (0, 0, -60, 0, 0, 0, -60, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (-10, 0, 0, 0, 0, 0, 0, 0, -10),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+    )
+
     def __init__(self, turn):
         super().__init__(turn)
 
@@ -1659,7 +1672,7 @@ class Elephant(Piece):
         return 1
 
     def bonus(self, xiangqi: Xiangqi, position, values):
-        return 0
+        return Elephant.position_malus[position[0]][position[1]]
     
     def __hash__(self):
         return 4
