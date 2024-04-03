@@ -30,11 +30,11 @@ class TranspositionTable:
             self.table.move_to_end(key, last=True)
         return entry
 
-    def remove_one_fourth(self):
+    def pop_front(self):
         for _ in range(self.maxsize // 4):
             self.table.popitem(last=False)
 
     def update(self, entry):
         self.table[entry.key] = entry
         if len(self.table) > self.maxsize:
-            self.table.popitem(last=False)
+            self.pop_front()

@@ -1,7 +1,7 @@
 from enum import Enum
 from math import inf
 from time import time
-
+from collections import defaultdict
 
 from transpositiontable import BoundType, TTEntry, TranspositionTable
 from utils.basealgo import BaseAlgo
@@ -45,6 +45,7 @@ class SearchInfo:
         self.root_pv: Move | None = None
         self.move_stack: list[Move] = []
         self.counter_moves: dict
+        self.history_heuristic: dict
         self.optimal_seq: list[PVSeqNode | None]
 
     def check_timer(self):
@@ -61,6 +62,9 @@ def prioritize_tt_move(generated_moves, tt_move):
             generated_moves[0], generated_moves[i] = tt_move, generated_moves[0]
             return
     # assert False, f"there is no {tt_move} in {generated_moves}"
+
+def move_coords(move: Move):
+    return move.from_coords, move.to_coords if move else None
 
 class PVAlgo(BaseAlgo):
 
@@ -118,7 +122,8 @@ class PVAlgo(BaseAlgo):
         best_move: Move | None = None
         next_depth = depth - 1
 
-        generated_moves = self.movepicker.move_order(xiangqi, tt_move, None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
+        generated_moves = self.movepicker.move_order(xiangqi, tt_move, None,
+                                                     None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
         # prioritize_tt_move(generated_moves, tt_move)
 
         for move in generated_moves:
@@ -214,8 +219,10 @@ class PVAlgo(BaseAlgo):
         move_count = 0
         prev_move = info.move_stack[-1] if info.move_stack else None
         counter_move = prev_move and info.counter_moves.get(prev_move.from_coords, prev_move.to_coords)
+        history_heuristic = info.history_heuristic[xiangqi.turn]
 
-        moves = self.movepicker.move_order(xiangqi, tt_move, counter_move, mode=MoveMode.ALL)
+        moves = self.movepicker.move_order(xiangqi, tt_move, counter_move,
+                                           history_heuristic, mode=MoveMode.ALL)
         # prioritize_tt_move(moves, tt_move)
 
         for move in moves:
@@ -258,7 +265,9 @@ class PVAlgo(BaseAlgo):
 
             if score >= beta:
                 if not is_capture:
-                    info.counter_moves[prev_move.from_coords, prev_move.to_coords] = move
+                    info.counter_moves[move_coords(prev_move)] = move
+                    history_heuristic[move_coords(move)] += 1 << depth
+
                 tt_entry = TTEntry(xiangqi, depth, BoundType.LOWER, beta, best_move)
                 self.transposition_table_p.update(tt_entry)
                 return beta
@@ -283,7 +292,8 @@ class PVAlgo(BaseAlgo):
         for depth in range(1, max_depth + 1):
             info.depth = depth
             info.optimal_seq = [None for _ in range(depth)]
-            info.counter_moves = {}
+            info.counter_moves = dict()
+            info.history_heuristic = [defaultdict(lambda: 0), defaultdict(lambda: 0)]
             value = self.principal_variation(xiangqi, alpha, beta, depth, NodeType.ROOT)
             print(f"optimal seq at {depth=}: {info.optimal_seq[0].to_list()}")
             print(f"valuation at {depth=}: {value}")

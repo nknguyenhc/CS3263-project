@@ -22,7 +22,8 @@ class MovePicker:
     }
 
     def move_order(self, xiangqi: Xiangqi, tt_move: Move | None,
-                   counter_move: Move | None, mode: int) -> List[Move]:
+                   counter_move: Move | None, history_heuristic: dict | None,
+                   mode: int) -> List[Move]:
         """Returns the sorted list of move dicts in the given board,
         in the order that the main search routine should try.
 
@@ -51,7 +52,8 @@ class MovePicker:
             move_mode = move.get_mode(xiangqi)
             if not (move_mode & mode):
                 continue
-            move.value = self.score(move, xiangqi, threats, supports, tt_move, counter_move)
+            move.value = self.score(move, xiangqi, threats, supports,
+                                    tt_move, counter_move, history_heuristic)
             moves.append(move)
         moves.sort(key=lambda move: -move.value)
         return moves
@@ -95,7 +97,8 @@ class MovePicker:
                     update_value(supports, MovePicker.piece_to_threat[piece.__class__], piece_position, (ii, jj))
         return threats, supports
 
-    def score(self, move, xiangqi, threats, supports, tt_move, counter_move):
+    def score(self, move: Move, xiangqi: Xiangqi,
+              threats, supports, tt_move, counter_move, history_heuristic: dict):
         """Returns the score of the given move.
         See explanation for move_order above.
 
@@ -115,11 +118,12 @@ class MovePicker:
             return 100000
         if move.mode & MoveMode.QUIET:
             counter_bonus = 2000 if move == counter_move else 0
+            history_bonus = history_heuristic.get((move.from_coords, move.to_coords), 0) if history_heuristic else 0
             check_bonus = 500 if move.mode & MoveMode.CHECK else 0
             escape_bonus = self.get_bonus(move, move.from_coords, threats, supports)
             en_prise_malus = -self.get_bonus(move, move.to_coords, threats, supports)
             king_or_forward_bonus = self.get_king_or_forward_bonus(move, xiangqi)
-            return counter_bonus + check_bonus + escape_bonus + en_prise_malus + king_or_forward_bonus
+            return history_bonus + counter_bonus + check_bonus + escape_bonus + en_prise_malus + king_or_forward_bonus
         else:
             piece_from = xiangqi.board[move.from_coords[0]][move.from_coords[1]]
             piece_to = xiangqi.board[move.to_coords[0]][move.to_coords[1]]
