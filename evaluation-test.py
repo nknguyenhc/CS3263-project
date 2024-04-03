@@ -34,6 +34,9 @@ def main():
     test_board("empty-cannon-bottom-choice-king", 130)
     test_board("empty-cannon-bottom-choice-advisor", -100)
     test_board("accidental-empty-cannon", -270)
+    test_board("horse-in-palace", 1200)
+    test_board("horse-in-palace-2", 1200)
+    test_board("horse-in-palace-not-locked", 500)
 
 if __name__ == '__main__':
     main()

@@ -1466,7 +1466,25 @@ class King(Piece):
             side_value = values[0]
         else:
             side_value = values[1]
-        return King.safety_malus[position[0]][position[1]] * min(abs(side_value) / 2000, 1)
+        
+        if position != (0, 4) and position != (9, 4):
+            return King.safety_malus[position[0]][position[1]] * min(abs(side_value) / 2000, 1)
+        
+        # if king is in safe position, check if its movement is blocked by other pieces.
+        if self.turn:
+            pieces = [(xiangqi.board[pos[0]][pos[1]], pos) for pos in [(9, 3), (9, 5), (8, 4)]]
+            other_side_value = values[1]
+        else:
+            pieces = [(xiangqi.board[pos[0]][pos[1]], pos) for pos in [(0, 3), (0, 5), (1, 4)]]
+            other_side_value = values[0]
+        if any((piece is None for piece, _ in pieces)):
+            return 0
+        constraints = xiangqi.get_constraints()
+        for piece, pos in pieces:
+            moves = [move for move in piece.actions(xiangqi, pos) if self._are_constraints_satisfied(move.from_coords, move.to_coords, constraints)]
+            if len(moves) != 0:
+                return -100 if self.turn else 100
+        return (-1100 if self.turn else 1100) * min(abs(other_side_value) / 2000, 1)
     
     def __hash__(self):
         return 1
