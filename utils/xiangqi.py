@@ -1713,7 +1713,7 @@ class Horse(Piece):
     def value(self, position, piece_count):
         """The lower the `piece_count`, the higher the value of the horse.
         """
-        return (1 if self.turn else -1) * (300 + 60 * (32 - piece_count) / 20)
+        return (1 if self.turn else -1) * (300 + 3 * (32 - piece_count))
 
     def activity(self, xiangqi, position):
         """Horse strength is dependent on whether it is pinned at its 4 sides.
@@ -1747,7 +1747,7 @@ class Horse(Piece):
                     possible_move_count += 1
                 if row < 9:
                     possible_move_count += 1
-        return math.log(possible_move_count + 2) / math.log(10) * 0.4 + 0.6
+        return math.log(possible_move_count + 1) / math.log(9) * 0.4 + 0.6
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """The bonus of the horse is if it threatens the king.
@@ -1972,7 +1972,7 @@ class Rook(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        return math.log(min(action_count, 9)) / math.log(9) * 0.5 + 0.5
+        return math.log(min(action_count, 12)) / math.log(12) * 0.5 + 0.5
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus if the rook pins two enemy pieces ahead, both of which are horses and cannons.
@@ -2205,6 +2205,7 @@ class Cannon(Piece):
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus is added for empty cannons, i.e. cannon facing king directly without any piece in between.
+        Gives malus if there is piece to support. Likely to be a useless cannon.
         """
         if self.turn:
             king_position = xiangqi.king_positions[1]
@@ -2265,11 +2266,11 @@ class Cannon(Piece):
 
         def process_same_line(piece: Piece, i: int, j: int, reachable_move_count: callable, support_value: float):
             if isinstance(piece, Cannon):
-                return support_value + piece.value((i, j), xiangqi.get_piece_count())
+                return support_value + abs(piece.value((i, j), xiangqi.get_piece_count()))
             elif isinstance(piece, Horse):
                 num_moves_required = reachable_move_count()
                 if num_moves_required != 0: # num_moves_required == 2
-                    return support_value + piece.value((i, j), xiangqi.get_piece_count()) * discount_factor
+                    return support_value + abs(piece.value((i, j), xiangqi.get_piece_count())) * discount_factor
             # Currently not calculating rooks on the same line. May have to include this in future.
             return support_value
         
@@ -2278,9 +2279,9 @@ class Cannon(Piece):
                 return support_value
             move_count = reachable_move_count()
             if move_count == 1:
-                return support_value + piece.value((i, j), xiangqi.get_piece_count())
+                return support_value + abs(piece.value((i, j), xiangqi.get_piece_count()))
             elif move_count == 2:
-                return support_value + piece.value((i, j), xiangqi.get_piece_count()) * discount_factor
+                return support_value + abs(piece.value((i, j), xiangqi.get_piece_count())) * discount_factor
             else:
                 return support_value
 
@@ -2300,7 +2301,10 @@ class Cannon(Piece):
                         support_value = process_different_line(piece, i, j, 
                                                                lambda: piece.row_reachable_move_count(xiangqi, (i, j), row, col_min, col_max),
                                                                support_value)
-            return min(support_value, 1200) / 1200
+            support_value -= 250
+            if support_value < 0:
+                support_value *= 2
+            return min(support_value, 900) / 900
         
         def calculate_piece_coord_to_col(col, row_min, row_max):
             support_value = 0

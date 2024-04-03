@@ -13,6 +13,7 @@ class Evaluation:
                 if piece is None:
                     continue
                 piece_value = piece.value((row, col), piece_count) * piece.activity(xiangqi, (row, col))
+                # print(row, col, piece, piece_value)
                 if piece_value > 0:
                     red_value += piece_value
                 else:
