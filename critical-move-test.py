@@ -22,6 +22,7 @@ def test_board(board_name, expected_move):
 def main():
     test_board("take-back-rook", "H7-8")
     test_board("run-horse", "H3-5")
+    test_board("must-use-advisor", "A5-4")
 
 if __name__ == '__main__':
     main()

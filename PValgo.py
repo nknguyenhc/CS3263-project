@@ -306,4 +306,6 @@ class PVAlgo(BaseAlgo):
         except SearchTimeout:
             pass
         best_move = self.info.root_pv
+        if best_move is None:
+            raise Exception("Game is over, one side will win")
         return best_move
