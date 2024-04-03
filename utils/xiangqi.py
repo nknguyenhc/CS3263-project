@@ -1463,20 +1463,18 @@ class King(Piece):
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         if self.turn:
-            side_value = values[0]
+            other_side_value = values[1]
         else:
-            side_value = values[1]
+            other_side_value = values[0]
         
         if position != (0, 4) and position != (9, 4):
-            return King.safety_malus[position[0]][position[1]] * min(abs(side_value) / 2000, 1)
+            return King.safety_malus[position[0]][position[1]] * min(abs(other_side_value) / 2000, 1)
         
         # if king is in safe position, check if its movement is blocked by other pieces.
         if self.turn:
             pieces = [(xiangqi.board[pos[0]][pos[1]], pos) for pos in [(9, 3), (9, 5), (8, 4)]]
-            other_side_value = values[1]
         else:
             pieces = [(xiangqi.board[pos[0]][pos[1]], pos) for pos in [(0, 3), (0, 5), (1, 4)]]
-            other_side_value = values[0]
         if any((piece is None for piece, _ in pieces)):
             return 0
         constraints = xiangqi.get_constraints()
