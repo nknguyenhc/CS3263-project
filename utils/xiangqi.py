@@ -9,7 +9,7 @@ class Xiangqi():
     red_king_positions = set([(i, j) for i in range(7, 10) for j in range(3, 6)])
     black_king_positions = set([(i, j) for i in range(0, 3) for j in range(3, 6)])
 
-    def __init__(self, board=None, turn=True, king_positions=None, copy=True):
+    def __init__(self, board=None, turn=True, king_positions=None, copy=True, reversed_board=None):
         """Instantiates a new board.
         Board is either not given, which means a default board,
         or an array of 10x9, each element is either None or an instance of Piece class.
@@ -47,6 +47,7 @@ class Xiangqi():
         self.hash_value = None
         self.constraints = None # cached constraints
         self.next_boards = dict() # cached next boards
+        self.reversed_board = reversed_board # cached reversed board
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -74,11 +75,17 @@ class Xiangqi():
         """Returns the same board but turn is the opposite.
         To be used in evaluation & movepicker. Not to be mutated.
         """
+        if self.reversed_board is None:
+            self.reversed_board = self._reverse_board()
+        return self.reversed_board
+    
+    def _reverse_board(self):
         return Xiangqi(
             board=self.board,
             turn=not self.turn,
             king_positions=self.king_positions,
-            copy=False)
+            copy=False,
+            reversed_board=self)
 
     def from_string(board_string):
         """Given a string representation of the board,
