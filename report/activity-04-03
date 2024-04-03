@@ -1,0 +1,6 @@
+Aspiration window
+Usage of continuation history (not yet optimised)
+Counter move heuristic (potentially not yet optimised)
+Depth reduction needs more investigation
+Fine-tune futility pruning
+Handle checks

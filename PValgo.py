@@ -261,7 +261,7 @@ class PVAlgo(BaseAlgo):
             if score > best_score:
                 best_score = score
                 best_move = move
-                best_seq = info.optimal_seq[max(next_depth, 0)]
+                best_seq = info.optimal_seq[info.ply + 1]
 
             if score >= beta:
                 if not is_capture:
@@ -291,7 +291,7 @@ class PVAlgo(BaseAlgo):
         beta = inf
         for depth in range(1, max_depth + 1):
             info.depth = depth
-            info.optimal_seq = [None for _ in range(depth)]
+            info.optimal_seq = [None for _ in range(depth + 1)]
             info.counter_moves = dict()
             info.history_heuristic = [defaultdict(lambda: 0), defaultdict(lambda: 0)]
             value = self.principal_variation(xiangqi, alpha, beta, depth, NodeType.ROOT)
