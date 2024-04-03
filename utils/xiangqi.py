@@ -1972,7 +1972,7 @@ class Rook(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        return math.log(min(action_count, 12)) / math.log(12) * 0.5 + 0.5
+        return math.log(min(action_count, 9)) / math.log(9) * 0.5 + 0.5
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus if the rook pins two enemy pieces ahead, both of which are horses and cannons.
