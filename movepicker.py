@@ -20,8 +20,9 @@ class MovePicker:
         Elephant: 3,
         Pawn: 4,
     }
-    
-    def move_order(self, xiangqi: Xiangqi, mode: int) -> List[Move]:
+
+    def move_order(self, xiangqi: Xiangqi, tt_move: Move | None,
+                   counter_move: Move | None, mode: int) -> List[Move]:
         """Returns the sorted list of move dicts in the given board,
         in the order that the main search routine should try.
 
@@ -50,11 +51,11 @@ class MovePicker:
             move_mode = move.get_mode(xiangqi)
             if not (move_mode & mode):
                 continue
-            move.value = self.score(move, xiangqi, threats, supports)
+            move.value = self.score(move, xiangqi, threats, supports, tt_move, counter_move)
             moves.append(move)
         moves.sort(key=lambda move: -move.value)
         return moves
-    
+
     def get_threats_and_supports(self, xiangqi):
         """Get the threats that the enemy poses and the supports that friendly pieces have at each position.
         The returned value is a tuple of two values, each is a 2D array, each element corresponds to the position in the board.
@@ -93,8 +94,8 @@ class MovePicker:
                     ii, jj = supported_cell
                     update_value(supports, MovePicker.piece_to_threat[piece.__class__], piece_position, (ii, jj))
         return threats, supports
-    
-    def score(self, move, xiangqi, threats, supports):
+
+    def score(self, move, xiangqi, threats, supports, tt_move, counter_move):
         """Returns the score of the given move.
         See explanation for move_order above.
 
@@ -110,12 +111,15 @@ class MovePicker:
         Forward moves are given a slightly higher priority, and backward moves are given a slightly lower priority.
         King movement from safety position is heavily penalised.
         """
+        if move == tt_move:
+            return 100000
         if move.mode & MoveMode.QUIET:
+            counter_bonus = 2000 if move == counter_move else 0
             check_bonus = 500 if move.mode & MoveMode.CHECK else 0
             escape_bonus = self.get_bonus(move, move.from_coords, threats, supports)
             en_prise_malus = -self.get_bonus(move, move.to_coords, threats, supports)
             king_or_forward_bonus = self.get_king_or_forward_bonus(move, xiangqi)
-            return check_bonus + escape_bonus + en_prise_malus + king_or_forward_bonus
+            return counter_bonus + check_bonus + escape_bonus + en_prise_malus + king_or_forward_bonus
         else:
             piece_from = xiangqi.board[move.from_coords[0]][move.from_coords[1]]
             piece_to = xiangqi.board[move.to_coords[0]][move.to_coords[1]]
@@ -123,7 +127,7 @@ class MovePicker:
             difference = abs(piece_to.value(move.from_coords, piece_count)) - abs(piece_from.value(move.to_coords, piece_count))
             is_captured_piece_not_threatened = threats[move.to_coords[0]][move.to_coords[1]] == 0
             return 2000 + max(difference, 0) if difference >= 0 or is_captured_piece_not_threatened else difference
-        
+
     def get_bonus(self, move, position, threats, supports):
         """Obtains the bonus/malus if a piece moves into/away from the position.
         Returns a positive value.
@@ -133,7 +137,7 @@ class MovePicker:
         support_value = primary_support_value if move.from_coords != support_piece_position else secondary_support_value
         if threat_value == 0:
             return 0
-        
+
         match move.piecetype:
             case Pieces.ROOK:
                 if threat_value > 1:
@@ -158,7 +162,7 @@ class MovePicker:
                     return 50 if threat_value == 3 else 0
                 else:
                     return 200
-    
+
     def get_king_or_forward_bonus(self, move: Move, xiangqi: Xiangqi):
         """Returns the reward for the move dependent on whether the move is a king movement.
         If it is a king movement, give a reward/penalty according to manhattan distance from the safety position.

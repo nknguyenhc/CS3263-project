@@ -37,12 +37,20 @@ class PVSeqNode:
 
 class SearchInfo:
 
-    def __init__(self):
+    def __init__(self, max_time):
+        self.max_time = max_time
         self.start_time = time()
         self.depth = 0
         self.ply = 0
         self.root_pv: Move | None = None
+        self.move_stack: list[Move] = []
+        self.counter_moves: dict
         self.optimal_seq: list[PVSeqNode | None]
+
+    def check_timer(self):
+        if time() - self.start_time >= self.max_time:
+            raise SearchTimeout
+
 
 def prioritize_tt_move(generated_moves, tt_move):
     if tt_move is None:
@@ -65,24 +73,28 @@ class PVAlgo(BaseAlgo):
     def quiescence(self, xiangqi: Xiangqi, alpha: int, beta: int, depth: int = 5,
                    node_type: NodeType = NodeType.NONE):
         info = self.info
+        info.check_timer()
 
         if depth == 0:
             return (1 if xiangqi.turn else -1) * self.evaluation.evaluate(xiangqi)
 
-        tt_entry: TTEntry = self.transposition_table_q.lookup(xiangqi)
-        if tt_entry:
-            tt_score = tt_entry.score
-            tt_bound = tt_entry.bound
-            tt_depth = tt_entry.depth
-            if (tt_depth >= depth
-                and (tt_bound == BoundType.EXACT or
-                (tt_bound == BoundType.UPPER and tt_score <= alpha) or
-                (tt_bound == BoundType.LOWER and tt_score >= beta))):
-                # print(f"tt_table hit at {depth=} with {tt_score=}")
-                return tt_score
-            tt_move = tt_entry.move
-        else:
-            tt_move = None
+        pv_node = node_type == NodeType.PV
+
+        tt_entry: TTEntry = self.transposition_table_p.lookup(xiangqi)
+        tt_score = tt_entry and tt_entry.score
+        tt_bound = tt_entry and tt_entry.bound
+        tt_depth = tt_entry and tt_entry.depth
+        tt_move = tt_entry and tt_entry.move
+
+        if (not pv_node
+            and tt_depth is not None
+            and tt_depth >= depth
+            and (
+                (tt_bound == BoundType.EXACT)
+                or (tt_bound == BoundType.UPPER and tt_score <= alpha)
+                or (tt_bound == BoundType.LOWER and tt_score >= beta)
+            )):
+            return tt_score
 
         score = (1 if xiangqi.turn else -1) * self.evaluation.evaluate(xiangqi)
         if score >= beta:
@@ -92,7 +104,6 @@ class PVAlgo(BaseAlgo):
             tt_entry = TTEntry(xiangqi, depth, BoundType.LOWER, score, None)
             self.transposition_table_q.update(tt_entry)
             return beta
-
         if score > alpha:
             # we know that the score lies between alpha and beta, so in this case
             # we know that this score the EXACT score
@@ -103,18 +114,17 @@ class PVAlgo(BaseAlgo):
             # what is the actual value, we only know the bound!
             tt_bound = BoundType.UPPER
 
-        # line 1348: tt_eval can be used as a better evaluation
-
         best_score = score
         best_move: Move | None = None
         next_depth = depth - 1
 
-        generated_moves = self.movepicker.move_order(xiangqi, mode=MoveMode.CAPTURE | MoveMode.CHECK)
-        prioritize_tt_move(generated_moves, tt_move)
+        generated_moves = self.movepicker.move_order(xiangqi, tt_move, None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
+        # prioritize_tt_move(generated_moves, tt_move)
+
         for move in generated_moves:
             next_xiangqi = xiangqi.move(move)
             info.ply += 1
-            score = -self.quiescence(next_xiangqi, -beta, -alpha, next_depth)
+            score = -self.quiescence(next_xiangqi, -beta, -alpha, next_depth, node_type)
             info.ply -= 1
 
             if score > best_score:
@@ -138,8 +148,8 @@ class PVAlgo(BaseAlgo):
 
     def principal_variation(self, xiangqi: Xiangqi, alpha: int, beta: int, depth: int,
                             node_type: NodeType = NodeType.NONE):
-        init_depth = depth
         info = self.info
+        info.check_timer()
         is_root = node_type == NodeType.ROOT
         pv_node = node_type != NodeType.NON_PV
 
@@ -202,13 +212,18 @@ class PVAlgo(BaseAlgo):
         is_pvs = False
         tt_bound = BoundType.UPPER
         move_count = 0
+        prev_move = info.move_stack[-1] if info.move_stack else None
+        counter_move = prev_move and info.counter_moves.get(prev_move.from_coords, prev_move.to_coords)
 
-        moves = self.movepicker.move_order(xiangqi, mode=MoveMode.ALL)
-        prioritize_tt_move(moves, tt_move)
+        moves = self.movepicker.move_order(xiangqi, tt_move, counter_move, mode=MoveMode.ALL)
+        # prioritize_tt_move(moves, tt_move)
 
         for move in moves:
             move_count += 1
+
             info.ply += 1
+            info.move_stack.append(move)
+
             is_capture = move.is_capture(xiangqi)
             is_check = move.is_check(xiangqi)
             next_xiangqi = xiangqi.move(move)
@@ -234,6 +249,7 @@ class PVAlgo(BaseAlgo):
                                                   next_depth, NodeType.PV)
 
             info.ply -= 1
+            info.move_stack.pop()
 
             if score > best_score:
                 best_score = score
@@ -241,6 +257,8 @@ class PVAlgo(BaseAlgo):
                 best_seq = info.optimal_seq[max(next_depth, 0)]
 
             if score >= beta:
+                if not is_capture:
+                    info.counter_moves[prev_move.from_coords, prev_move.to_coords] = move
                 tt_entry = TTEntry(xiangqi, depth, BoundType.LOWER, beta, best_move)
                 self.transposition_table_p.update(tt_entry)
                 return beta
@@ -255,7 +273,7 @@ class PVAlgo(BaseAlgo):
 
         tt_entry = TTEntry(xiangqi, depth, tt_bound, alpha, best_move)
         self.transposition_table_p.update(tt_entry)
-        info.optimal_seq[init_depth] = PVSeqNode(best_move, best_seq)
+        info.optimal_seq[info.ply] = PVSeqNode(best_move, best_seq)
         return alpha
 
     def iterative_deepening(self, xiangqi: Xiangqi, max_depth=5):
@@ -264,14 +282,15 @@ class PVAlgo(BaseAlgo):
         beta = inf
         for depth in range(1, max_depth + 1):
             info.depth = depth
-            info.optimal_seq = [None for _ in range(depth + 1)]
+            info.optimal_seq = [None for _ in range(depth)]
+            info.counter_moves = {}
             value = self.principal_variation(xiangqi, alpha, beta, depth, NodeType.ROOT)
-            print(f"optimal seq at {depth=}: {info.optimal_seq[depth].to_list()}")
+            print(f"optimal seq at {depth=}: {info.optimal_seq[0].to_list()}")
             print(f"valuation at {depth=}: {value}")
         # print(f"{info.evaluations=}")
 
     def next_move(self, xiangqi: Xiangqi) -> Move | None:
-        self.info = SearchInfo()
+        self.info = SearchInfo(max_time=20)
         try:
             self.iterative_deepening(xiangqi)
         except SearchTimeout:
