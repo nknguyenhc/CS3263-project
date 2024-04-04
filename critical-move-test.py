@@ -41,6 +41,7 @@ def main():
 
     test_mistake("trapped-cannon", "C8-1")
     test_mistake("develop-rook", "R9+2")
+    test_mistake("cannon-left-unprotected", "R2.1")
 
 if __name__ == '__main__':
     main()
