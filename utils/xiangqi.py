@@ -2241,7 +2241,7 @@ class Cannon(Piece):
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus is added for empty cannons, i.e. cannon facing king directly without any piece in between.
-        Gives malus if there is piece to support. Likely to be a useless cannon.
+        Gives malus if there is no piece to support, and the cannon is near the enemy bottom.
         """
         if self.turn:
             king_position = xiangqi.king_positions[1]
@@ -2267,10 +2267,14 @@ class Cannon(Piece):
                     if cannon_col > col:
                         col_min = col
                         col_max = cannon_col
+                        col_min_2 = col
+                        col_max_2 = 8
                     else:
                         col_min = cannon_col
                         col_max = col
-                    return 350 * calculate_piece_coord_to_row(row, col_min, col_max)
+                        col_min_2 = 0
+                        col_max_2 = col
+                    return 200 * calculate_piece_coord_to_row(row, col_min, col_max, col_min_2, col_max_2)
             assert False
 
         def inspect_col(cannon_row, col, base_value):
@@ -2292,28 +2296,37 @@ class Cannon(Piece):
                     if cannon_row > row:
                         row_min = row
                         row_max = cannon_row
+                        row_min_2 = row
+                        row_max_2 = 9
                     else:
                         row_min = cannon_row
                         row_max = row
-                    return 750 * calculate_piece_coord_to_col(col, row_min, row_max)
+                        row_min_2 = 0
+                        row_max_2 = row
+                    return 750 * calculate_piece_coord_to_col(col, row_min, row_max, row_min_2, row_max_2)
             assert False
         
         discount_factor = 0.7
 
-        def process_same_line(piece: Piece, i: int, j: int, reachable_move_count: callable, support_value: float):
+        def process_same_line(piece: Piece, i: int, j: int, min_index: int, max_index: int,
+                              reachable_move_count: callable, support_value: float):
             if isinstance(piece, Cannon):
                 return support_value + abs(piece.value((i, j), xiangqi.get_piece_count()))
             elif isinstance(piece, Horse):
-                num_moves_required = reachable_move_count()
+                num_moves_required = reachable_move_count(min_index, max_index)
                 if num_moves_required != 0: # num_moves_required == 2
                     return support_value + abs(piece.value((i, j), xiangqi.get_piece_count())) * discount_factor
             # Currently not calculating rooks on the same line. May have to include this in future.
             return support_value
         
-        def process_different_line(piece: Piece, i: int, j: int, reachable_move_count: callable, support_value: float):
+        def process_different_line(piece: Piece, i: int, j: int, min_index: int, max_index: int, min_value_2: int, max_value_2: int,
+                                   reachable_move_count: callable, support_value: float):
             if not (isinstance(piece, Cannon) or isinstance(piece, Horse) or isinstance(piece, Rook)):
                 return support_value
-            move_count = reachable_move_count()
+            if isinstance(piece, Cannon):
+                move_count = reachable_move_count(min_value_2, max_value_2)
+            else:
+                move_count = reachable_move_count(min_index, max_index)
             if move_count == 1:
                 return support_value + abs(piece.value((i, j), xiangqi.get_piece_count()))
             elif move_count == 2:
@@ -2321,7 +2334,7 @@ class Cannon(Piece):
             else:
                 return support_value
 
-        def calculate_piece_coord_to_row(row, col_min, col_max):
+        def calculate_piece_coord_to_row(row, col_min, col_max, col_min_2, col_max_2):
             support_value = 0
             for i, board_row in enumerate(xiangqi.board):
                 for j, piece in enumerate(board_row):
@@ -2330,19 +2343,16 @@ class Cannon(Piece):
                     if i == row:
                         if j == col:
                             continue
-                        support_value = process_same_line(piece, i, j,
-                                                          lambda: piece.row_reachable_move_count(xiangqi, (i, j), row, col_min, col_max),
+                        support_value = process_same_line(piece, i, j, col_min, col_max,
+                                                          lambda col_min, col_max: piece.row_reachable_move_count(xiangqi, (i, j), row, col_min, col_max),
                                                           support_value)
                     else:
-                        support_value = process_different_line(piece, i, j, 
-                                                               lambda: piece.row_reachable_move_count(xiangqi, (i, j), row, col_min, col_max),
+                        support_value = process_different_line(piece, i, j, col_min, col_max, col_min_2, col_max_2,
+                                                               lambda col_min, col_max: piece.row_reachable_move_count(xiangqi, (i, j), row, col_min, col_max),
                                                                support_value)
-            support_value -= 250
-            if support_value < 0:
-                support_value *= 2
             return min(support_value, 900) / 900
         
-        def calculate_piece_coord_to_col(col, row_min, row_max):
+        def calculate_piece_coord_to_col(col, row_min, row_max, row_min_2, row_max_2):
             support_value = 0
             for i, board_row in enumerate(xiangqi.board):
                 for j, piece in enumerate(board_row):
@@ -2351,18 +2361,59 @@ class Cannon(Piece):
                     if j == col:
                         if i == row:
                             continue
-                        support_value = process_same_line(piece, i, j,
-                                                          lambda: piece.col_reachable_move_count(xiangqi, (i, j), col, row_min, row_max),
+                        support_value = process_same_line(piece, i, j, row_min, row_max,
+                                                          lambda row_min, row_max: piece.col_reachable_move_count(xiangqi, (i, j), col, row_min, row_max),
                                                           support_value)
                     else:
-                        support_value = process_different_line(piece, i, j,
-                                                               lambda: piece.col_reachable_move_count(xiangqi, (i, j), col, row_min, row_max),
+                        support_value = process_different_line(piece, i, j, row_min, row_max, row_min_2, row_max_2,
+                                                               lambda row_min, row_max: piece.col_reachable_move_count(xiangqi, (i, j), col, row_min, row_max),
                                                                support_value)
             return min(support_value, 1200) / 1200
+        
+        def inspect_bottom_bonus(row, col):
+            if self.turn and row != 0 and row != 1:
+                return 0
+            if not self.turn and row != 9 and row != 8:
+                return 0
+            
+            # Find moveable range of the cannon
+            min_movable_col = col
+            max_movable_col = col
+            for test_col in range(col + 1, 9):
+                if xiangqi.board[row][test_col] is None:
+                    max_movable_col = test_col
+                else:
+                    break
+            for test_col in range(col - 1, -1, -1):
+                if xiangqi.board[row][test_col] is None:
+                    min_movable_col = test_col
+                else:
+                    break
+            
+            support_value = 0
+            for i, board_row in enumerate(xiangqi.board):
+                for j, piece in enumerate(board_row):
+                    if piece is None or piece.turn != self.turn:
+                        continue
+                    if not (isinstance(piece, Rook) or isinstance(piece, Horse) or isinstance(piece, Cannon)):
+                        continue
+                    if i == row:
+                        if j == col:
+                            continue
+                        support_value += abs(piece.value((i, j), xiangqi.get_piece_count()))
+                    else:
+                        reachable_move_count = piece.row_reachable_move_count(xiangqi, (i, j), row, min_movable_col, max_movable_col)
+                        if reachable_move_count == 1:
+                            support_value += discount_factor * abs(piece.value((i, j), xiangqi.get_piece_count()))
+            support_value -= 270
+            if support_value < 0:
+                support_value *= 2
+            return 150 * min(support_value, 900) / 900
 
         row, col = position
         value = inspect_row(row, col, 0)
         value = inspect_col(row, col, value)
+        value += inspect_bottom_bonus(row, col)
         return value if self.turn else -value
     
     def row_reachable_move_count(self, xiangqi: Xiangqi, position, row: int, col_min: int, col_max: int):
