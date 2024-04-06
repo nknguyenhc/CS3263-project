@@ -1,9 +1,10 @@
 from utils.xiangqi import Xiangqi
 from randomalgo import RandomAlgo
 from evaluationalgo import EvaluationAlgo
+from PValgo import PVAlgo
 
 # Replace this line with your algo
-algo = EvaluationAlgo()
+algo_p = lambda: PVAlgo()
 
 def test_puzzle(puzzle_name, move_limit, expected_moves):
     """Tests a puzzle, a definite sequence of checks/kills to checkmate.
@@ -14,6 +15,7 @@ def test_puzzle(puzzle_name, move_limit, expected_moves):
     
     board = Xiangqi.from_string(board_string)
     moves = []
+    algo = algo_p()
     for _ in range(2 * move_limit):
         move = algo.next_move(board)
         if move is None:
@@ -46,6 +48,7 @@ def test_endgame(endgame_name, is_red_win, move_limit=40):
     
     board = Xiangqi.from_string(board_string)
     moves = []
+    algo = algo_p()
     for _ in range(2 * move_limit):
         move = algo.next_move(board)
         if move is None:

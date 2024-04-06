@@ -20,7 +20,7 @@ class EvaluationAlgo(BaseAlgo):
         
         value = -EvaluationAlgo.INF
         best_move = None
-        for move in self.movepicker.move_order(xiangqi, MoveMode.ALL):
+        for move in self.movepicker.move_order(xiangqi, None, None, None, MoveMode.ALL):
             new_value, _ = self.negamax(xiangqi.move(move), depth - 1, -beta, -alpha)
             new_value = -new_value
             if best_move is None:
