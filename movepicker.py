@@ -21,9 +21,13 @@ class MovePicker:
         Pawn: 4,
     }
 
-    def move_order(self, xiangqi: Xiangqi, tt_move: Move | None,
-                   counter_move: Move | None, history_heuristic: dict | None,
-                   mode: int) -> List[Move]:
+    def move_gen(self, xiangqi: Xiangqi):
+        self.xiangqi = xiangqi
+        self.moves = xiangqi.actions()
+        return self.moves
+
+    def move_order(self, tt_move: Move | None, counter_move: Move | None,
+                   history_heuristic: dict | None, mode: int) -> List[Move]:
         """Returns the sorted list of move dicts in the given board,
         in the order that the main search routine should try.
 
@@ -46,9 +50,10 @@ class MovePicker:
         To obtain the bonus for escaping captures and malus for putting piece en prise,
         we need to get the available actions from the opponent in the current board.
         """
+        xiangqi = self.xiangqi
         threats, supports = self.get_threats_and_supports(xiangqi)
         moves = []
-        for move in xiangqi.actions():
+        for move in self.moves:
             move_mode = move.get_mode(xiangqi)
             if not (move_mode & mode):
                 continue

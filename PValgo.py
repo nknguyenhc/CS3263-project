@@ -124,10 +124,14 @@ class PVAlgo(BaseAlgo):
         best_move: Move | None = None
         next_depth = depth - 1
 
-        generated_moves = self.movepicker.move_order(xiangqi, tt_move, None,
-                                                     None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
+        moves = self.movepicker.move_gen(xiangqi)
+        if not moves:
+            return VALUE_LOSE + info.ply
 
-        for move in generated_moves:
+        moves = self.movepicker.move_order(tt_move, None,
+                                           None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
+
+        for move in moves:
             next_xiangqi = xiangqi.move(move)
             info.ply += 1
             score = -self.quiescence(next_xiangqi, -beta, -alpha, next_depth, node_type)
@@ -222,11 +226,12 @@ class PVAlgo(BaseAlgo):
         counter_move = prev_move and info.counter_moves.get(prev_move.from_coords, prev_move.to_coords)
         history_heuristic = info.history_heuristic[xiangqi.turn]
 
-        moves = self.movepicker.move_order(xiangqi, tt_move, counter_move,
-                                           history_heuristic, mode=MoveMode.ALL)
+        moves = self.movepicker.move_gen(xiangqi)
         if not moves:
-            # there is no move at this position. The opponent win!
             return VALUE_LOSE + info.ply
+
+        moves = self.movepicker.move_order(tt_move, counter_move,
+                                           history_heuristic, mode=MoveMode.ALL)
 
         for move in moves:
             move_count += 1
