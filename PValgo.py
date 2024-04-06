@@ -66,6 +66,8 @@ def prioritize_tt_move(generated_moves, tt_move):
 def move_coords(move: Move):
     return move.from_coords, move.to_coords if move else None
 
+VALUE_LOSE = -10101010
+
 class PVAlgo(BaseAlgo):
 
     def __init__(self):
@@ -124,7 +126,6 @@ class PVAlgo(BaseAlgo):
 
         generated_moves = self.movepicker.move_order(xiangqi, tt_move, None,
                                                      None, mode=MoveMode.CAPTURE | MoveMode.CHECK)
-        # prioritize_tt_move(generated_moves, tt_move)
 
         for move in generated_moves:
             next_xiangqi = xiangqi.move(move)
@@ -223,7 +224,9 @@ class PVAlgo(BaseAlgo):
 
         moves = self.movepicker.move_order(xiangqi, tt_move, counter_move,
                                            history_heuristic, mode=MoveMode.ALL)
-        # prioritize_tt_move(moves, tt_move)
+        if not moves:
+            # there is no move at this position. The opponent win!
+            return VALUE_LOSE + info.ply
 
         for move in moves:
             move_count += 1
@@ -285,7 +288,7 @@ class PVAlgo(BaseAlgo):
         info.optimal_seq[info.ply] = PVSeqNode(best_move, best_seq)
         return alpha
 
-    def iterative_deepening(self, xiangqi: Xiangqi, max_depth=5):
+    def iterative_deepening(self, xiangqi: Xiangqi, max_depth=6):
         info = self.info
         alpha = -inf
         beta = inf
@@ -295,8 +298,9 @@ class PVAlgo(BaseAlgo):
             info.counter_moves = dict()
             info.history_heuristic = [defaultdict(lambda: 0), defaultdict(lambda: 0)]
             value = self.principal_variation(xiangqi, alpha, beta, depth, NodeType.ROOT)
-            print(f"optimal seq at {depth=}: {info.optimal_seq[0].to_list()}")
-            print(f"valuation at {depth=}: {value}")
+            # if optimal_seq := info.optimal_seq[0]:
+            #     print(f"optimal seq at {depth=}: {optimal_seq.to_list()}")
+            # print(f"valuation at {depth=}: {value}")
         # print(f"{info.evaluations=}")
 
     def next_move(self, xiangqi: Xiangqi) -> Move | None:
@@ -306,6 +310,7 @@ class PVAlgo(BaseAlgo):
         except SearchTimeout:
             pass
         best_move = self.info.root_pv
-        if best_move is None:
-            raise Exception("Game is over, one side will win")
+        # if best_move is None:
+        #     raise Exception("Game is over, one side will win")
+        print(f"{best_move=}")
         return best_move
