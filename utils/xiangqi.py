@@ -803,7 +803,7 @@ class CheckConstraint:
         """
         self.king_position = king_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         """Determine if a move violates this constraint.
         Subclasses should override this method.
         """
@@ -828,7 +828,7 @@ class RookDiscoverCheckConstraint(CheckConstraint):
         self.rook_position = rook_position
         self.piece_position = piece_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         if move.from_coords == self.king_position and move.to_coords == self.piece_position:
             return False
         if move.from_coords != self.piece_position:
@@ -861,7 +861,7 @@ class CannonDiscoverTwoPiecesCheckConstraint(CheckConstraint):
         self.cannon_position = cannon_position
         self.piece_positions = piece_positions
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         if move.from_coords == self.king_position and move.to_coords in self.piece_positions:
             return False
         if move.from_coords not in self.piece_positions:
@@ -894,7 +894,7 @@ class CannonDiscoverNoPieceCheckConstraint(CheckConstraint):
         super().__init__(king_position)
         self.cannon_position = cannon_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         if self.king_position[0] == self.cannon_position[0]:
             if move.to_coords[0] != self.king_position[0]:
                 return True
@@ -925,7 +925,7 @@ class HorseDiscoverCheckConstraint(CheckConstraint):
         self.horse_position = horse_position
         self.piece_position = piece_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         if move.from_coords != self.piece_position:
             return True
         return move.to_coords == self.horse_position
@@ -944,7 +944,7 @@ class KingDiscoverCheckConstraint(CheckConstraint):
         super().__init__(king_position)
         self.piece_position = piece_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         if move.from_coords == self.king_position:
             return move.to_coords != self.piece_position
         if move.from_coords != self.piece_position:
@@ -967,7 +967,9 @@ class RookCheckConstraint(CheckConstraint):
         self.king_position = king_position
         self.rook_position = rook_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
+        if move.to_coords == self.rook_position:
+            return True
         if self.king_position[0] == self.rook_position[0]:
             if move.from_coords == self.king_position:
                 return move.to_coords[0] != self.king_position[0] or move.to_coords == self.rook_position
@@ -999,7 +1001,9 @@ class CannonCheckConstraint(CheckConstraint):
         self.cannon_position = cannon_position
         self.piece_position = piece_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
+        if move.to_coords == self.cannon_position:
+            return True
         if self.king_position[0] == self.cannon_position[0]:
             if move.from_coords == self.king_position:
                 return move.to_coords[0] != self.king_position[0] or move.to_coords[1] == self.piece_position[1]
@@ -1049,7 +1053,7 @@ class HorseCheckConstraint(CheckConstraint):
         self.horse_position = horse_position
         self.pin_position = pin_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         return move.from_coords == self.king_position or move.to_coords == self.horse_position \
             or move.to_coords == self.pin_position
 
@@ -1067,7 +1071,7 @@ class PawnCheckConstraint(CheckConstraint):
         super().__init__(king_position)
         self.pawn_position = pawn_position
 
-    def satisfies(self, move):
+    def satisfies(self, move: "Move"):
         return move.from_coords == self.king_position or move.to_coords == self.pawn_position
 
     def is_check(self):
