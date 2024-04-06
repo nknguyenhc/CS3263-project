@@ -7,7 +7,8 @@ def test_board(filename):
     board = Xiangqi.from_string(board_string)
     print(f"Picking moves in {filename}")
     move_picker = MovePicker()
-    moves = [move.to_notation(board) for move in move_picker.move_order(board, None, None, None, MoveMode.ALL)]
+    move_picker.move_gen(board)
+    moves = [move.to_notation(board) for move in move_picker.move_order(None, None, None, MoveMode.ALL)]
     print(f"Result: {moves}")
 
 def main():

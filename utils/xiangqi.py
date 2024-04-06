@@ -49,6 +49,8 @@ class Xiangqi():
         self.next_boards = dict() # cached next boards
         self.reversed_board = reversed_board # cached reversed board
         self.is_check = None
+        self.threats = None # cached threat values of cells
+        self.supports = None # cached support values of cells
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -297,6 +299,48 @@ class Xiangqi():
         if self.is_check is None:
             self.is_check = self._is_in_check()
         return self.is_check
+    
+    def get_threats_and_supports(self):
+        """Get the threats that the enemy poses and the supports that friendly pieces have at each position.
+        The returned value is a tuple of two values, each is a 2D array, each element corresponds to the position in the board.
+        Each element is a 3-element array, with first value is the greatest threat, second value is the second greatest threat,
+        and third value is the position of the piece creating the first threat.
+        The lower the value of the attacker, the higher the threat.
+        Each element has either one of the following value:
+        0: no threat
+        1: threat by rook/king
+        2: threat by cannon/horse
+        3: threat by advisor/elephant
+        4: threat by pawn
+        """
+        if self.threats is not None:
+            return self.threats, self.supports
+        
+        reverse_board = self.reverse_board()
+        self.threats = [[0 for i in range(9)] for j in range(10)]
+        self.supports = [[[0, 0, None] for i in range(9)] for j in range(10)]
+
+        def update_value(new_value, piece_position, target_position):
+            values = self.supports[target_position[0]][target_position[1]]
+            if new_value >= values[0]:
+                values[1] = values[0]
+                values[0] = new_value
+                values[2] = piece_position
+            elif new_value > values[1]:
+                values[1] = new_value
+
+        for i, row in enumerate(reverse_board.board):
+            for j, piece in enumerate(row):
+                if piece is None:
+                    continue
+                piece_position = (i, j)
+                for threatened_cell in piece.get_reachable_cells(reverse_board, piece_position):
+                    ii, jj = threatened_cell
+                    self.threats[ii][jj] = max(self.threats[ii][jj], piece.threat_value())
+                for supported_cell in piece.get_reachable_cells(self, piece_position):
+                    ii, jj = supported_cell
+                    update_value(piece.threat_value(), piece_position, (ii, jj))
+        return self.threats, self.supports
 
     def _move(self, action: "Move") -> "Xiangqi":
         """Returns a new board from application of given action on this board.
@@ -1299,6 +1343,13 @@ class Piece:
         If more than 2 moves, return 0.
         To be used only in calculating bonus for empty cannon.
         """
+        raise NotImplementedError
+    
+    def threat_value(self):
+        """Returns the threat value that a piece can pose to a position.
+        Must be a constant for the same piece type.
+        """
+        raise NotImplementedError
     
     def __hash__(self):
         """Each piece must be hashable.
@@ -1499,6 +1550,9 @@ class King(Piece):
                 return -100 if self.turn else 100
         return (-1100 if self.turn else 1100) * min(abs(other_side_value) / 2000, 1)
     
+    def threat_value(self):
+        return 1
+
     def __hash__(self):
         return 1
     
@@ -1576,6 +1630,9 @@ class Advisor(Piece):
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         return 0
+    
+    def threat_value(self):
+        return 3
     
     def __hash__(self):
         return 2
@@ -1686,6 +1743,9 @@ class Elephant(Piece):
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         return Elephant.position_malus[position[0]][position[1]]
+    
+    def threat_value(self):
+        return 3
     
     def __hash__(self):
         return 4
@@ -1895,6 +1955,9 @@ class Horse(Piece):
                     return 2
         return 0
     
+    def threat_value(self):
+        return 2
+    
     def __hash__(self):
         return 8
     
@@ -2102,6 +2165,9 @@ class Rook(Piece):
                 return 2
         return 0
     
+    def threat_value(self):
+        return 1
+
     def __hash__(self):
         return 16
     
@@ -2463,6 +2529,9 @@ class Cannon(Piece):
                 return 2
         return 0
     
+    def threat_value(self):
+        return 2
+    
     def __hash__(self):
         return 32
     
@@ -2558,6 +2627,9 @@ class Pawn(Piece):
             return bonus_value if self.turn else -bonus_value
         else:
             return 0
+    
+    def threat_value(self):
+        return 4
         
     def __hash__(self):
         return 64

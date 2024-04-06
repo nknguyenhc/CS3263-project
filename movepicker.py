@@ -11,16 +11,6 @@ class Pieces:
     PAWN = Pawn
 
 class MovePicker:
-    piece_to_threat = {
-        King: 1,
-        Rook: 1,
-        Horse: 2,
-        Cannon: 2,
-        Advisor: 3,
-        Elephant: 3,
-        Pawn: 4,
-    }
-
     def move_gen(self, xiangqi: Xiangqi):
         self.xiangqi = xiangqi
         self.moves = xiangqi.actions()
@@ -51,7 +41,7 @@ class MovePicker:
         we need to get the available actions from the opponent in the current board.
         """
         xiangqi = self.xiangqi
-        threats, supports = self.get_threats_and_supports(xiangqi)
+        threats, supports = xiangqi.get_threats_and_supports()
         moves = []
         for move in self.moves:
             move_mode = move.get_mode(xiangqi)
@@ -62,45 +52,6 @@ class MovePicker:
             moves.append(move)
         moves.sort(key=lambda move: -move.value)
         return moves
-
-    def get_threats_and_supports(self, xiangqi):
-        """Get the threats that the enemy poses and the supports that friendly pieces have at each position.
-        The returned value is a tuple of two values, each is a 2D array, each element corresponds to the position in the board.
-        Each element is a 3-element array, with first value is the greatest threat, second value is the second greatest threat,
-        and third value is the position of the piece creating the first threat.
-        The lower the value of the attacker, the higher the threat.
-        Each element has either one of the following value:
-        0: no threat
-        1: threat by rook/king
-        2: threat by cannon/horse
-        3: threat by advisor/elephant
-        4: threat by pawn
-        """
-        reverse_board = xiangqi.reverse_board()
-        threats = [[0 for i in range(9)] for j in range(10)]
-        supports = [[[0, 0, None] for i in range(9)] for j in range(10)]
-
-        def update_value(array, new_value, piece_position, target_position):
-            values = array[target_position[0]][target_position[1]]
-            if new_value >= values[0]:
-                values[1] = values[0]
-                values[0] = new_value
-                values[2] = piece_position
-            elif new_value > values[1]:
-                values[1] = new_value
-
-        for i, row in enumerate(reverse_board.board):
-            for j, piece in enumerate(row):
-                if piece is None:
-                    continue
-                piece_position = (i, j)
-                for threatened_cell in piece.get_reachable_cells(reverse_board, piece_position):
-                    ii, jj = threatened_cell
-                    threats[ii][jj] = max(threats[ii][jj], MovePicker.piece_to_threat[piece.__class__])
-                for supported_cell in piece.get_reachable_cells(xiangqi, piece_position):
-                    ii, jj = supported_cell
-                    update_value(supports, MovePicker.piece_to_threat[piece.__class__], piece_position, (ii, jj))
-        return threats, supports
 
     def score(self, move: Move, xiangqi: Xiangqi,
               threats, supports, tt_move, counter_move, history_heuristic: dict):
