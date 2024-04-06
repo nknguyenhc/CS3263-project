@@ -206,8 +206,8 @@ class PVAlgo(BaseAlgo):
             and (not tt_move or tt_capture)):
             return static_eval
 
-        if not is_root and not tt_move:
-            depth -= 2 # TODO: tune this
+        if not is_root and not tt_move and not xiangqi.is_in_check():
+            depth -= 2
 
         # only pv_node can cause depth <= at this location
         if depth <= 0:

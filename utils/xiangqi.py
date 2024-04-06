@@ -48,6 +48,7 @@ class Xiangqi():
         self.constraints = None # cached constraints
         self.next_boards = dict() # cached next boards
         self.reversed_board = reversed_board # cached reversed board
+        self.is_check = None
 
     def find_king_positions(self):
         king_positions = [None, None]
@@ -286,6 +287,16 @@ class Xiangqi():
         if piece is None:
             return True
         return piece.turn != self.turn
+    
+    def _is_in_check(self):
+        return any((constraint.is_check() for constraint in self.get_constraints()))
+    
+    def is_in_check(self):
+        """Determines if the current side to move is in check.
+        """
+        if self.is_check is None:
+            self.is_check = self._is_in_check()
+        return self.is_check
 
     def _move(self, action: "Move") -> "Xiangqi":
         """Returns a new board from application of given action on this board.
