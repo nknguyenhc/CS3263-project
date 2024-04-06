@@ -2092,8 +2092,12 @@ class Rook(Piece):
         """Bonus if the rook pins two enemy pieces ahead, both of which are horses and cannons.
         """
         base_value_each = 100
-        def is_piece_cannon_or_horse(piece):
-            return isinstance(piece, Horse) or isinstance(piece, Cannon)
+        unrooted_rook_malus = 150
+
+        threats, _ = xiangqi.get_threats_and_supports()
+
+        def is_piece_cannon_horse_rook(piece):
+            return isinstance(piece, Horse) or isinstance(piece, Cannon) or isinstance(piece, Rook)
         
         def inspect_col(col, row_range):
             enemy_found = False
@@ -2101,10 +2105,16 @@ class Rook(Piece):
                 piece = xiangqi.board[row][col]
                 if piece is None:
                     continue
-                if piece.turn == self.turn or not is_piece_cannon_or_horse(piece):
+                if piece.turn == self.turn or not is_piece_cannon_horse_rook(piece):
                     return 0
                 if enemy_found:
-                    return base_value_each
+                    if isinstance(piece, Rook):
+                        if threats[row][col] == 0:
+                            return unrooted_rook_malus
+                        else:
+                            return 0
+                    else:
+                        return base_value_each
                 else:
                     enemy_found = True
             return 0
@@ -2115,10 +2125,16 @@ class Rook(Piece):
                 piece = xiangqi.board[row][col]
                 if piece is None:
                     continue
-                if piece.turn == self.turn or not is_piece_cannon_or_horse(piece):
+                if piece.turn == self.turn or not is_piece_cannon_horse_rook(piece):
                     return 0
                 if enemy_found:
-                    return base_value_each
+                    if isinstance(piece, Rook):
+                        if threats[row][col] == 0:
+                            return unrooted_rook_malus
+                        else:
+                            return 0
+                    else:
+                        return base_value_each
                 else:
                     enemy_found = True
             return 0

@@ -37,6 +37,7 @@ def main():
     test_board("horse-in-palace", 1200)
     test_board("horse-in-palace-2", 1200)
     test_board("horse-in-palace-not-locked", 500)
+    test_board("unrooted-rook", 200)
 
 if __name__ == '__main__':
     main()
