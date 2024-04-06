@@ -50,7 +50,10 @@ def test_endgame(endgame_name, is_red_win, move_limit=40):
     board = Xiangqi.from_string(board_string)
     moves = []
     algo = algo_p()
-    for _ in range(2 * move_limit):
+    for i in range(2 * move_limit):
+        if i % 10 == 0:
+            print(board)
+        
         move = algo.next_move(board)
         if move is None:
             break
@@ -121,8 +124,8 @@ def test_endgames():
     test_endgame("hard/horses-vs-full-defenders", True)
 
 def main():
-    test_puzzles()
-    # test_endgames()
+    # test_puzzles()
+    test_endgames()
 
 if __name__ == '__main__':
     main()
