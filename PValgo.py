@@ -47,6 +47,7 @@ class SearchInfo:
         self.counter_moves: dict
         self.history_heuristic: dict
         self.optimal_seq: list[PVSeqNode | None]
+        self.root_eval: list
 
     def check_timer(self):
         if time() - self.start_time >= self.max_time:
@@ -285,6 +286,9 @@ class PVAlgo(BaseAlgo):
                 tt_bound = BoundType.EXACT
                 is_pvs = True
 
+            if is_root:
+                info.root_eval.append((move.to_notation(xiangqi), score))
+
         if is_root:
             info.root_pv = best_move
 
@@ -293,7 +297,7 @@ class PVAlgo(BaseAlgo):
         info.optimal_seq[info.ply] = PVSeqNode(best_move, best_seq)
         return alpha
 
-    def iterative_deepening(self, xiangqi: Xiangqi, max_depth=6):
+    def iterative_deepening(self, xiangqi: Xiangqi, max_depth=7):
         info = self.info
         alpha = -inf
         beta = inf
@@ -301,8 +305,12 @@ class PVAlgo(BaseAlgo):
             info.depth = depth
             info.optimal_seq = [None for _ in range(depth + 1)]
             info.counter_moves = dict()
+            info.root_eval = []
             info.history_heuristic = [defaultdict(lambda: 0), defaultdict(lambda: 0)]
             value = self.principal_variation(xiangqi, alpha, beta, depth, NodeType.ROOT)
+            # print(f"{depth=}")
+            # print(f"{info.root_eval=}")
+            # print(f"{info.root_pv=}")
             # if optimal_seq := info.optimal_seq[0]:
             #     print(f"optimal seq at {depth=}: {optimal_seq.to_list()}")
             # print(f"valuation at {depth=}: {value}")
@@ -317,5 +325,4 @@ class PVAlgo(BaseAlgo):
         best_move = self.info.root_pv
         # if best_move is None:
         #     raise Exception("Game is over, one side will win")
-        print(f"{best_move=}")
         return best_move

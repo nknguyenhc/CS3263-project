@@ -20,6 +20,7 @@ def test_puzzle(puzzle_name, move_limit, expected_moves):
         move = algo.next_move(board)
         if move is None:
             break
+        print(f"Move: {move.to_notation(board)}")
         moves.append(move.to_notation(board))
         board = board.move(move)
     
@@ -53,6 +54,7 @@ def test_endgame(endgame_name, is_red_win, move_limit=40):
         move = algo.next_move(board)
         if move is None:
             break
+        print(f"Move: {move.to_notation(board)}")
         moves.append(move.to_notation(board))
         board = board.move(move)
     
