@@ -1983,11 +1983,11 @@ class Rook(Piece):
             else:
                 new_action_count = action_count + coefficient
                 if piece.turn != self.turn:
-                    coefficient = 0.2
+                    coefficient *= 0.2
                 elif isinstance(piece, Cannon) or isinstance(piece, Rook):
-                    coefficient = 1
+                    coefficient *= 1
                 else:
-                    coefficient = 0.6
+                    coefficient *= 0.6
                 return new_action_count, piece_count + 1, coefficient
 
         def inspect_col(col, row_range, action_count):
@@ -2001,7 +2001,7 @@ class Rook(Piece):
 
         def inspect_row(row, col_range, action_count):
             piece_count = 0
-            coefficient = 1
+            coefficient = 0.5
             for col in col_range:
                 action_count, piece_count, coefficient = inspect_cell(row, col, action_count, piece_count, coefficient)
                 if piece_count == 2:
@@ -2012,7 +2012,7 @@ class Rook(Piece):
         action_count = inspect_col(position[1], range(position[0] - 1, -1, -1), action_count)
         action_count = inspect_row(position[0], range(position[1] + 1, 9), action_count)
         action_count = inspect_row(position[0], range(position[1] - 1, -1, -1), action_count)
-        return math.log(min(action_count, 9)) / math.log(9) * 0.5 + 0.5
+        return math.log(min(action_count, 12)) / math.log(12) * 0.5 + 0.5
 
     def bonus(self, xiangqi: Xiangqi, position, values):
         """Bonus if the rook pins two enemy pieces ahead, both of which are horses and cannons.
@@ -2278,7 +2278,7 @@ class Cannon(Piece):
                         col_max = col
                         col_min_2 = 0
                         col_max_2 = col
-                    return 200 * calculate_piece_coord_to_row(row, col_min, col_max, col_min_2, col_max_2)
+                    return 350 * calculate_piece_coord_to_row(row, col_min, col_max, col_min_2, col_max_2)
             assert False
 
         def inspect_col(cannon_row, col, base_value):
@@ -2409,10 +2409,10 @@ class Cannon(Piece):
                         reachable_move_count = piece.row_reachable_move_count(xiangqi, (i, j), row, min_movable_col, max_movable_col)
                         if reachable_move_count == 1:
                             support_value += discount_factor * abs(piece.value((i, j), xiangqi.get_piece_count()))
-            support_value -= 270
-            if support_value < 0:
-                support_value *= 2
-            return 150 * min(support_value, 900) / 900
+            if support_value > 270:
+                return 0
+            else:
+                return 300 * (support_value - 270) / 900
 
         row, col = position
         value = inspect_row(row, col, 0)
